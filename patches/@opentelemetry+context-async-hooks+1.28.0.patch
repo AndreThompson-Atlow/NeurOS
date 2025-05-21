@@ -1,0 +1,21 @@
+diff --git a/node_modules/@opentelemetry/context-async-hooks/build/src/AsyncHooksContextManager.js b/node_modules/@opentelemetry/context-async-hooks/build/src/AsyncHooksContextManager.js
+index 2c36f1d..1d80053 100644
+--- a/node_modules/@opentelemetry/context-async-hooks/build/src/AsyncHooksContextManager.js
++++ b/node_modules/@opentelemetry/context-async-hooks/build/src/AsyncHooksContextManager.js
+@@ -15,7 +15,13 @@
+  */
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.AsyncHooksContextManager = void 0;
+-const api_1 = require("@opentelemetry/api");
+-const asyncHooks = require("async_hooks");
++const api_1 = require("@opentelemetry/api");
++let asyncHooks;
++if (typeof window === 'undefined') {
++    asyncHooks = require("async_hooks");
++} else {
++    // Provide a mock for client-side if absolutely necessary, though ideally this code path isn't hit.
++    asyncHooks = { createHook: () => ({ enable: () => {}, disable: () => {} }), executionAsyncId: () => {} };
++}
+ const AbstractAsyncHooksContextManager_1 = require("./AbstractAsyncHooksContextManager");
+ class AsyncHooksContextManager extends AbstractAsyncHooksContextManager_1.AbstractAsyncHooksContextManager {
+     constructor() {

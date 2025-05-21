@@ -1,0 +1,336 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NeuroOS UI/UX Reimagination Style Guide - Neural Litmus */
+
+@layer base {
+  :root {
+    /* Base UI Colors (Light Theme from User Prompt) - Updated for Neural Litmus */
+    --background: 220 23% 9%; /* #0A0F1C - Midnight Navy */
+    --foreground: 220 25% 95%; /* #F5F5FA - Cool White */
+    
+    --card: 225 18% 13%; /* #1C1F2A - Slightly Lighter Navy for Card Gradient End */
+    --card-foreground: 220 25% 95%; /* #F5F5FA */
+
+    --popover: 225 18% 13%; 
+    --popover-foreground: 220 25% 95%;
+
+    /* Highlight Neon & Accent Glow */
+    --primary: 165 100% 50%; /* #00FFD1 - Specter Cyan (mapped to primary for ShadCN compatibility) */
+    --primary-foreground: 220 23% 9%; /* #0A0F1C - Midnight Navy (for text on primary buttons) */
+    
+    --secondary: 337 100% 50%; /* #FF0055 - Judgment Crimson (mapped to secondary) */
+    --secondary-foreground: 220 25% 95%; /* #F5F5FA (for text on secondary buttons) */
+
+    --muted: 230 14% 24%; /* #2C2C3A - Shadow Gray (Specter Gray for muted backgrounds) */
+    --muted-foreground: 220 15% 65%; /* Lighter gray for muted text on dark bg */
+
+    /* Accent: Using Specter Cyan as primary, so we might use a different accent or stick to primary */
+    --accent: 165 100% 50%; /* #00FFD1 - Specter Cyan */
+    --accent-foreground: 220 23% 9%; /* #0A0F1C */
+
+    /* Destructive: Using Judgment Crimson as secondary, also using it for destructive actions */
+    --destructive: 337 100% 50%; /* #FF0055 */
+    --destructive-foreground: 220 25% 95%;
+
+    --border: 230 14% 30%; /* #393E50 - Darker variant of Shadow Gray for borders */
+    --input: 230 14% 18%;  /* #23232E - Darker input background */
+    --ring: 165 100% 50%;  /* #00FFD1 - Specter Cyan for focus rings */
+
+    --radius: 1rem; /* Default border radius for cards as per new guide */
+
+    /* Law Colors */
+    --law-primary-color: 45 100% 50%;    /* #FFD700 - Construct Gold */
+    --law-secondary-color: 212 10% 70%;  /* Lighter Steel Gray for dark theme */
+    --law-accent-color: 45 100% 60%;     /* Brighter Gold */
+    --law-surface-color: 220 20% 15%;   /* Darker surface for Law cards */
+    --law-border-color: 45 100% 30%;    /* Dim Gold border */
+    --law-text-color: 220 23% 9%; /* Midnight Navy for text on gold buttons */
+    --law-text-on-surface-color: hsl(var(--foreground)); /* Cool White for text on dark surfaces */
+
+    /* Chaos Colors */
+    --chaos-primary-color: 337 100% 50%;  /* #FF0055 - Judgment Crimson */
+    --chaos-secondary-color: 256 50% 60%; /* Brighter Violet */
+    --chaos-accent-color: 337 100% 65%;   /* Lighter Crimson/Pink */
+    --chaos-surface-color: 220 20% 15%;  /* Darker surface for Chaos cards */
+    --chaos-border-color: 337 100% 35%;   /* Dim Crimson border */
+    --chaos-text-color: 220 25% 95%;      /* Cool White for text on crimson buttons */
+    --chaos-text-on-surface-color: hsl(var(--foreground)); /* Cool White for text on dark surfaces */
+
+    /* Neutral Colors */
+    --neutral-primary-color: 165 100% 50%; /* #00FFD1 - Specter Cyan as Neutral Primary */
+    --neutral-secondary-color: 230 14% 40%;/* #555B70 - Mid Shadow Gray as Neutral Secondary */
+    --neutral-accent-color: 165 100% 70%;  /* Lighter Specter Cyan */
+    --neutral-surface-color: 220 20% 15%; /* Darker surface for Neutral cards */
+    --neutral-border-color: 165 100% 30%;  /* Dim Cyan border */
+    --neutral-text-color: 220 23% 9%;     /* Midnight Navy for text on cyan buttons */
+    --neutral-text-on-surface-color: hsl(var(--foreground)); /* Cool White for text on dark surfaces */
+    
+    /* Neutral Progress variant for Progress component */
+    --neutral-progress-fill: hsl(var(--muted-foreground));
+
+
+    /* Status Colors (Adjusted for dark theme visibility) */
+    --status-new: 210 30% 70%; /* #9CB3C9 - Lightened Muted Blue/Gray */
+    --status-new-bg: 220 20% 18%; 
+    --status-familiar: 207 80% 65%; /* #68B6F3 - Brighter Law Accent */
+    --status-familiar-bg: 210 30% 20%; 
+    --status-understood: 145 60% 55%; /* #57C380 - Brighter Green */
+    --status-understood-bg: 145 40% 18%; 
+    --status-needs-review: 0 80% 65%; /* #F36868 - Brighter Destructive Red */
+    --status-needs-review-bg: 0 40% 18%;
+
+    /* Text Colors */
+    --text-primary-neuro: hsl(var(--foreground));
+    --text-secondary-neuro: hsl(var(--muted-foreground)); /* Using muted-foreground for secondary text */
+    --text-tertiary-neuro: hsl(var(--muted)); /* Using muted for tertiary text for more contrast */
+    --divider-neuro: hsl(var(--border)); /* Using border for dividers */
+    
+    /* Spacing Units */
+    --spacing-unit: 8px;
+    --spacing-xs: var(--spacing-unit); /* 8px */
+    --spacing-sm: calc(var(--spacing-unit) * 2); /* 16px */
+    --spacing-md: calc(var(--spacing-unit) * 3); /* 24px */
+    --spacing-lg: calc(var(--spacing-unit) * 4); /* 32px */
+    --spacing-xl: calc(var(--spacing-unit) * 6); /* 48px */
+    --spacing-xxl: calc(var(--spacing-unit) * 8); /* 64px */
+
+    /* Chart colors */
+    --chart-1: hsl(var(--primary)); 
+    --chart-2: hsl(var(--secondary)); 
+    --chart-3: hsl(var(--law-primary-color)); 
+    --chart-4: hsl(var(--chaos-primary-color));
+    --chart-5: hsl(var(--muted-foreground));
+  }
+
+  * {
+    @apply border-border; 
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans; 
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-text-primary-neuro;
+  }
+
+  .module-title { @apply text-3xl font-bold leading-tight; } 
+  .domain-header { @apply text-2xl font-semibold leading-snug; }
+  .node-title { @apply text-xl font-medium leading-normal; }
+  .phase-header { @apply text-2xl font-semibold leading-snug flex items-center; }
+
+  .body-text { @apply text-base leading-relaxed text-text-secondary-neuro; } 
+  .secondary-text { @apply text-sm leading-relaxed text-text-tertiary-neuro; } 
+  .status-text { @apply text-xs font-semibold uppercase tracking-wider; } 
+
+  .font-theme-law { /* Removed @apply font-law; */ }
+  .font-theme-chaos { /* Removed @apply font-chaos; */ }
+  .font-theme-neutral { /* Removed @apply font-neutral; */ }
+}
+
+@layer components {
+  .card { 
+    @apply rounded-lg p-[var(--spacing-md)] text-card-foreground shadow-cyan-sm border; 
+    background: linear-gradient(145deg, hsl(var(--card)), hsl(var(--background)));
+    border-color: hsl(var(--border)); 
+    transition: transform 0.3s ease, box-shadow 0.3s ease; 
+  }
+  .card:not([data-no-hover="true"]):hover {
+    @apply scale-[1.02] shadow-cyan-md;
+  }
+  
+  .card[data-alignment="law"] { 
+    border-left-width: 4px;
+    border-left-color: hsl(var(--law-primary-color));
+  } 
+  .card[data-alignment="chaos"] { 
+    border-left-width: 4px;
+    border-left-color: hsl(var(--chaos-primary-color));
+  } 
+  .card[data-alignment="neutral"] { 
+    border-left-width: 4px;
+    border-left-color: hsl(var(--neutral-primary-color)); 
+  }
+
+  .btn { 
+    @apply font-bold border-none py-[var(--spacing-xs)] px-[var(--spacing-sm)] rounded-md uppercase transition-colors duration-200 ease-in-out; 
+    box-shadow: 0 2px 6px hsla(var(--primary), 0.25); 
+  }
+  .btn:hover { @apply transform -translate-y-px; }
+  .btn:active { @apply transform translate-y-px; }
+
+  .btn-primary-neuro { @apply bg-primary text-primary-foreground hover:bg-primary/80; } 
+  .btn-secondary-neuro { @apply bg-secondary text-secondary-foreground hover:bg-secondary/80; } 
+  
+  .btn-law { @apply bg-law-primary-color text-law-text-color hover:bg-law-primary-color/80; /* Removed font-law */ }
+  .btn-chaos { @apply bg-chaos-primary-color text-chaos-text-color hover:bg-chaos-primary-color/80; /* Removed font-chaos */ }
+  .btn-neutral { @apply bg-neutral-primary-color text-neutral-text-color hover:bg-neutral-primary-color/80; /* Removed font-neutral */ }
+  
+  .text-glow-law { text-shadow: 0 0 5px hsl(var(--law-primary-color)); }
+  .text-glow-chaos { text-shadow: 0 0 5px hsl(var(--chaos-primary-color)); }
+  .text-glow-neutral { text-shadow: 0 0 5px hsl(var(--neutral-primary-color)); }
+  .text-glow-cyan { text-shadow: 0 0 4px hsl(var(--primary)); }
+  .text-glow-crimson { text-shadow: 0 0 4px hsl(var(--secondary)); }
+  .text-glow-gold { text-shadow: 0 0 4px hsl(var(--law-primary-color)); }
+
+  .node-status { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border; }
+  .node-new { @apply bg-status-new-bg text-status-new border-status-new; }
+  .node-familiar { @apply bg-status-familiar-bg text-status-familiar border-status-familiar; }
+  .node-understood { @apply bg-status-understood-bg text-status-understood border-status-understood; }
+  .node-needs-review { @apply bg-status-needs-review-bg text-status-needs-review border-status-needs-review; }
+  
+  .dialogue-bubble { @apply p-[var(--spacing-md)] rounded-lg max-w-[80%] relative mb-[var(--spacing-md)] shadow-sm; } 
+  .dialogue-law { @apply bg-law-surface-color text-law-text-on-surface-color border border-law-border-color; /* Removed font-law */ }
+  .dialogue-chaos { @apply bg-chaos-surface-color text-chaos-text-on-surface-color border border-chaos-border-color; /* Removed font-chaos */ }
+  .dialogue-neutral { @apply bg-neutral-surface-color text-neutral-text-on-surface-color border border-neutral-border-color; /* Removed font-neutral */ }
+  .dialogue-user { @apply bg-background text-text-primary-neuro border border-divider-neuro self-end; /* Removed font-neutral */ }
+
+  .dungeon-phase-gateway { @apply bg-gradient-to-b from-law-surface-color/30 to-law-surface-color/50 border-l-4 border-l-law-primary-color; }
+  .dungeon-phase-tower { @apply bg-gradient-to-b from-law-surface-color/40 to-law-surface-color/60 border-l-4 border-l-law-primary-color; }
+  .dungeon-phase-library { @apply bg-gradient-to-b from-law-surface-color/50 to-law-surface-color/70 border-l-4 border-l-law-primary-color; }
+  .dungeon-phase-rift { @apply bg-gradient-to-b from-chaos-surface-color/30 to-chaos-surface-color/50 border-l-4 border-l-chaos-primary-color; }
+  .dungeon-phase-praxis { @apply bg-gradient-to-b from-neutral-surface-color/30 to-neutral-surface-color/50 border-l-4 border-l-neutral-primary-color; }
+  .dungeon-phase-hearth { @apply bg-gradient-to-b from-neutral-surface-color/40 to-neutral-surface-color/60 border-l-4 border-l-neutral-primary-color; }
+  .dungeon-phase-gate { @apply bg-gradient-to-b from-law-surface-color/40 via-chaos-surface-color/40 to-neutral-surface-color/40 border-l-4 border-l-text-primary-neuro; }
+
+  .entity-law { @apply text-law-primary-color border border-law-secondary-color bg-gradient-to-br from-law-surface-color/50 to-muted/30; }
+  .entity-neutral { @apply text-neutral-primary-color border border-neutral-secondary-color bg-gradient-to-br from-neutral-surface-color/50 to-muted/30; }
+  .entity-chaos { @apply text-chaos-primary-color border border-chaos-secondary-color bg-gradient-to-br from-chaos-surface-color/50 to-muted/30; }
+
+  .ui-tabs-trigger[data-state="active"] { @apply bg-card text-primary shadow-md border-b-2 border-b-primary; } 
+  .ui-tabs-trigger { @apply text-muted-foreground hover:text-primary; } 
+  .ui-tabs-list { @apply bg-muted/20 p-1 border-border rounded-md; } 
+
+  .ui-alert { @apply border-border bg-card text-card-foreground rounded-md; } 
+  .ui-alert-destructive { @apply border-destructive/50 text-destructive bg-destructive/10; }
+  .ui-alert-destructive > svg { @apply text-destructive; }
+
+  .ui-label { @apply text-muted-foreground; }
+
+  .ui-input::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+  .ui-textarea::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 0.7;
+  }
+
+  .ui-input,
+  .ui-textarea {
+    @apply bg-input border-border text-foreground; 
+    border-radius: calc(var(--radius) - 0.5rem);
+  }
+  .ui-input:focus-visible { 
+    @apply ring-2 ring-ring border-ring; 
+  }
+  .ui-textarea:focus-visible { 
+    @apply ring-2 ring-ring border-ring; 
+  }
+
+  .ui-progress { @apply h-2 rounded-full bg-muted; }
+
+  .ui-select-trigger { @apply bg-input border-border text-foreground; }
+  .ui-select-content { @apply bg-popover text-popover-foreground border-border; }
+
+  .ui-select-item[data-state="selected"]:focus, .ui-select-item[data-state="selected"]:hover { 
+    @apply bg-accent/30 text-accent-foreground; 
+  }
+  .ui-select-item:not([data-state="selected"]):focus {
+    @apply bg-accent/20 text-accent-foreground; 
+  }
+  .ui-select-item:not([data-state="selected"]):hover { 
+    @apply bg-accent/20 text-accent-foreground; 
+  }
+
+
+  .ui-tooltip-content { @apply bg-popover text-popover-foreground border-border shadow-md rounded-md p-[var(--spacing-xs)]; } 
+
+  .dashboard-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[var(--spacing-md)]; 
+  }
+  .dashboard-widget {
+    @apply min-h-[150px]; 
+  }
+}
+
+@keyframes typing { from { width: 0; } to { width: 100%; } } 
+@keyframes blink-caret { from, to { border-color: transparent; } 50% { border-color: hsl(var(--primary)); } } 
+@keyframes glitch { 2%,64%{ transform: translate(2px,0) skew(0deg); } 4%,60%{ transform: translate(-2px,0) skew(0deg); } 62%{ transform: translate(0,0) skew(5deg); } }
+@keyframes dissolve { 0% { opacity: 1; filter: blur(0px); } 100% { opacity: 0; filter: blur(10px) drop-shadow(0 0 5px hsl(var(--secondary))); transform: scale(0.8); } } 
+@keyframes shatter { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(1.05) rotate(2deg) translateX(5px); filter: drop-shadow(0 0 3px hsl(var(--primary))); } 100% { opacity: 0; transform: scale(0.9) rotate(-5deg) translateX(20px); filter: blur(5px) drop-shadow(0 0 0px hsl(var(--primary))); } } 
+@keyframes vanish { 0% { opacity: 1; filter: drop-shadow(0 0 3px hsl(var(--law-primary-color))); } 100% { opacity: 0; transform: translateY(-20px); filter: drop-shadow(0 0 0px hsl(var(--law-primary-color))); } } 
+@keyframes pulse-destructive { 0%, 100% { box-shadow: 0 0 0 0 hsla(var(--secondary), 0.4); } 50% { box-shadow: 0 0 0 10px hsla(var(--secondary), 0); } } 
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+@keyframes lawEntrance { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes chaosEntrance { from { transform: scale(0.8) rotate(-5deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
+@keyframes neutralEntrance { from { opacity: 0; } to { opacity: 1; } } 
+
+.typewriter-text {
+  overflow: hidden;
+  border-right: .15em solid hsl(var(--primary)); 
+  white-space: nowrap;
+  margin: 0 auto;
+  letter-spacing: .05em;
+  animation: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+}
+.glitch-flicker { animation: glitch 1s linear infinite; }
+.animate-dissolve { animation: dissolve 0.5s ease-out forwards; }
+.animate-shatter { animation: shatter 0.6s ease-in-out forwards; }
+.animate-vanish { animation: vanish 0.4s ease-in forwards; }
+.animate-pulse-destructive { animation: pulse-destructive 2s infinite; }
+.animate-fadeIn { animation: fadeIn 0.5s ease-out forwards; }
+
+.character-law-anim { animation: lawEntrance 400ms cubic-bezier(0, 0, 0.2, 1) forwards; }
+.character-chaos-anim { animation: chaosEntrance 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+.character-neutral-anim { animation: neutralEntrance 300ms ease forwards; }
+
+
+::-webkit-scrollbar {
+  width: 8px; 
+  height: 8px; 
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted)); 
+  border-radius: 4px; 
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground)); 
+}
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted)) hsl(var(--background)); 
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px; 
+  height: 8px; 
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+  border-radius: 4px; 
+  border: 2px solid hsl(var(--background)); 
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+
+.scrollbar-thumb-muted::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted));
+}
+.scrollbar-thumb-muted::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground));
+}
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  background: transparent;
+}
