@@ -118,6 +118,7 @@ export function NodeDisplay({
     const nodeChanged = node?.id !== prevNodeId.current;
     prevNodeId.current = node?.id;
 
+    // Reset states when node changes
     if (nodeChanged) {
         if (!evaluationResult) { 
           clearEvaluationResultCallback();
@@ -125,16 +126,14 @@ export function NodeDisplay({
         setActiveTermDefinition(null);
         setRecallInput('');
         setEpicInput('');
+        setShowAttentionCheck(true);
+        setShowRecall(false);
+        setHideContentForRecall(false);
     }
   }, [node?.id, evaluationResult, clearEvaluationResultCallback]);
 
   useEffect(() => {
     if (!node) {
-        setShowAttentionCheck(true);
-        setShowRecall(false);
-        setHideContentForRecall(false);
-        setRecallInput('');
-        setEpicInput('');
         return;
     }
 
@@ -142,34 +141,35 @@ export function NodeDisplay({
     const currentNodeUnderstood = node.understood || node.status === 'understood'; 
     const isNodeNewAndNotReviewed = !currentNodeFamiliar && node.status === 'new' && currentInteraction !== 'reviewing';
 
-    if (currentInteraction === 'reviewing') {
-        setShowAttentionCheck(false);
-        setShowRecall(false); 
-        setHideContentForRecall(false); 
-    } else if (phase === 'download' && isNodeNewAndNotReviewed) {
-        if (evaluationResult && !evaluationResult.isPass && showRecall) {
+    // Only update these states if we're not in the middle of a node transition
+    // This prevents triggering state updates during render
+    if (prevNodeId.current === node.id) {
+        if (currentInteraction === 'reviewing') {
             setShowAttentionCheck(false);
-            setHideContentForRecall(true);
-        } else if (showRecall && (!evaluationResult || !evaluationResult.isPass)) { 
-            setShowAttentionCheck(false);
-            setHideContentForRecall(true); 
-        } else if (evaluationResult && evaluationResult.isPass && showRecall) { 
-            setShowAttentionCheck(false);
-            setShowRecall(true); 
+            setShowRecall(false); 
             setHideContentForRecall(false); 
+        } else if (phase === 'download' && isNodeNewAndNotReviewed) {
+            if (evaluationResult && !evaluationResult.isPass && showRecall) {
+                setShowAttentionCheck(false);
+                setHideContentForRecall(true);
+            } else if (showRecall && (!evaluationResult || !evaluationResult.isPass)) { 
+                setShowAttentionCheck(false);
+                setHideContentForRecall(true); 
+            } else if (evaluationResult && evaluationResult.isPass && showRecall) { 
+                setShowAttentionCheck(false);
+                setShowRecall(true); 
+                setHideContentForRecall(false); 
+            } 
+            // Don't override showAttentionCheck here, let the node change effect handle it
+        } else if (phase === 'install' && (currentInteraction === 'learning' && (node.status === 'familiar' || node.status === 'downloaded') || (node.status === 'installing' && !currentNodeUnderstood))) {
+            setShowAttentionCheck(false);
+            setShowRecall(false);
+            setHideContentForRecall(false);
         } else { 
-            setShowAttentionCheck(true);
+            setShowAttentionCheck(false);
             setShowRecall(false);
             setHideContentForRecall(false);
         }
-    } else if (phase === 'install' && (currentInteraction === 'learning' && (node.status === 'familiar' || node.status === 'downloaded') || (node.status === 'installing' && !currentNodeUnderstood))) {
-        setShowAttentionCheck(false);
-        setShowRecall(false);
-        setHideContentForRecall(false);
-    } else { 
-        setShowAttentionCheck(false);
-        setShowRecall(false);
-        setHideContentForRecall(false);
     }
   }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, showRecall, isNodeUnderstood]);
   
@@ -347,7 +347,7 @@ export function NodeDisplay({
               </div>
               
               {showAttentionCheck && !evaluationResult && (
-                <Card className="mt-spacing-xl neuro-card neuro-card-hover">
+                <Card className="mt-spacing-xl neuro-card">
                   <CardHeader className="pb-spacing-sm">
                     <CardTitle className="text-md flex items-center text-primary font-medium">
                       <Info size={18} className="mr-spacing-sm text-primary" />
@@ -586,7 +586,7 @@ export function NodeDisplay({
                   <div className="flex items-center justify-end">
                     <Button 
                       type="submit" 
-                      disabled={!epicInput.trim() || isLoadingEvaluation}
+                      disabled={!epicInput || !epicInput.trim() || isLoadingEvaluation}
                       className="neuro-button"
                     >
                       {isLoadingEvaluation ? (

@@ -353,6 +353,7 @@ export interface ReviewSessionNode {
   priorityScore?: number;
   lastReviewed?: Date;
   currentMemoryStrength?: number;
+  reviewDueDate?: Date;
 }
 
 export interface ActiveReviewSession {

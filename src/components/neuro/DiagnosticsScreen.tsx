@@ -485,7 +485,7 @@ export function DiagnosticsScreen({ modules, onExit }: DiagnosticsScreenProps) {
                   <ScrollArea className="h-[500px] pr-spacing-sm">
                     <div className="space-y-spacing-md">
                       {diagnosticQueue.map((test, index) => (
-                        <Card key={test.id} className={`neuro-card-hover ${test.status === 'completed' && test.result?.isPass ? 'border-green-500/50' : test.status === 'error' ? 'border-destructive/50' : ''}`}>
+                        <Card key={test.id} className={`neuro-card ${test.status === 'completed' && test.result?.isPass ? 'border-green-500/50' : test.status === 'error' ? 'border-destructive/50' : ''}`}>
                           <CardHeader className="p-spacing-sm pb-0">
                             <div className="flex justify-between">
                               <CardTitle className="neuro-text-subheading flex items-center gap-spacing-sm">

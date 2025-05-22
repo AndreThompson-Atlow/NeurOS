@@ -8,6 +8,7 @@ import { NodeDisplay } from '@/components/neuro/NodeDisplay';
 import { ChronicleDisplay, DungeonLoadingScreen } from '@/components/neuro/ChronicleDisplay';
 import { AdminPanel } from '@/components/neuro/AdminPanel';
 import { ReviewScreen } from '@/components/neuro/ReviewScreen';
+import { ReviewDashboard } from '@/components/neuro/ReviewDashboard';
 import { DiagnosticsScreen } from '@/components/neuro/DiagnosticsScreen';
 import { StatusScreen } from '@/components/neuro/StatusScreen';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export default function Home() {
     evaluationResult,
     currentEpicStep,
     activeChronicleRun,
+    activeReviewSession,
     addModuleToLibrary,
     startModule,
     submitRecallResponse,
@@ -75,7 +77,6 @@ export default function Home() {
     startReadingMode,
     navigateReadingMode,
     exitReadingMode,
-    activeReviewSession,
     currentUserProfile,
     toggleVoiceMode,
     isVoiceModeActive,
@@ -538,11 +539,14 @@ export default function Home() {
           </div>
         );
       case 'reviewing':
+        console.log("Rendering review content with activeReviewSession:", activeReviewSession);
         return (
             <div className="neuro-container neuro-fade-in py-spacing-lg">
-                <ReviewScreen
-                    onExit={() => setCurrentInteraction('initial')}
-                />
+                {activeReviewSession ? (
+                    <ReviewScreen onExit={() => setCurrentInteraction('initial')} />
+                ) : (
+                    <ReviewDashboard onExit={() => setCurrentInteraction('initial')} />
+                )}
             </div>
         );
       case 'diagnosing':

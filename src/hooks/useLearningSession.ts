@@ -2198,34 +2198,103 @@ export function useLearningSession() {
 
   const getNodesForReviewCallback = useCallback((): ReviewSessionNode[] => {
     const reviewableNodes: ReviewSessionNode[] = [];
+    
+    // Calculate memory decay based on time since last review
+    const calculateMemoryDecay = (node: Node): number => {
+      if (!node.lastReviewed) return 0; // No decay for nodes never reviewed
+      
+      const now = new Date();
+      const lastReviewed = new Date(node.lastReviewed);
+      const hoursSinceReview = (now.getTime() - lastReviewed.getTime()) / (1000 * 60 * 60);
+      const currentStrength = node.memoryStrength || 0;
+      
+      // Calculate memory decay rate based on current memory strength
+      // Higher memory strength means slower decay
+      let decayRate = 0;
+      if (currentStrength < 20) decayRate = 5;        // Fast decay for weak memories
+      else if (currentStrength < 40) decayRate = 2;   // Significant decay
+      else if (currentStrength < 60) decayRate = 1;   // Moderate decay
+      else if (currentStrength < 75) decayRate = 0.5; // Slow decay
+      else if (currentStrength < 90) decayRate = 0.2; // Very slow decay
+      else decayRate = 0.1;                           // Minimal decay for strong memories
+      
+      // Calculate decay amount based on time and rate
+      const decayAmount = Math.min(currentStrength, decayRate * (hoursSinceReview / 24)); // Daily decay
+      return Math.max(0, decayAmount);
+    };
+    
+    // Calculate when a node is due for review based on memory strength
+    const calculateReviewDueDate = (node: Node): Date => {
+      const lastReviewed = node.lastReviewed ? new Date(node.lastReviewed) : new Date(0);
+      const currentStrength = node.memoryStrength || 0;
+      
+      // Define intervals in hours based on memory strength
+      let intervalHours = 1; // Default to 1 hour
+      if (currentStrength < 20) intervalHours = 1;      // 1 hour
+      else if (currentStrength < 40) intervalHours = 24;     // 1 day 
+      else if (currentStrength < 60) intervalHours = 48;     // 2 days
+      else if (currentStrength < 75) intervalHours = 96;     // 4 days
+      else if (currentStrength < 90) intervalHours = 168;    // 1 week
+      else intervalHours = 336;                              // 2 weeks
+      
+      const dueDate = new Date(lastReviewed);
+      dueDate.setHours(dueDate.getHours() + intervalHours);
+      return dueDate;
+    };
+    
+    // Get weighted EPIC component with emphasis on most effective components
+    const getWeightedEpicComponent = (): EpicStep => {
+      const rand = Math.random();
+      if (rand < 0.4) return 'probe';         // 40% chance - most effective for recall
+      if (rand < 0.7) return 'explain';       // 30% chance - good for reinforcement
+      if (rand < 0.9) return 'implement';     // 20% chance - practical application
+      return 'connect';                       // 10% chance - connecting concepts
+    };
+    
     Object.values(learningState.modules).forEach(module => {
         const fullModule = module as Module; 
         if (!fullModule.domains) return; 
         if (fullModule.status === 'installed' || fullModule.status === 'understood' || fullModule.status === 'needs_review') {
             fullModule.domains.forEach(domain => {
                 (domain.nodes || []).forEach(node => {
-                    const memoryStrength = node.memoryStrength || 0;
+                    // Apply memory decay to get current memory strength
+                    const memoryDecay = calculateMemoryDecay(node);
+                    const currentMemoryStrength = Math.max(0, (node.memoryStrength || 0) - memoryDecay);
+                    
+                    // Calculate when this node is due for review
+                    const reviewDueDate = calculateReviewDueDate(node);
+                    const isDue = new Date() >= reviewDueDate;
+                    
+                    // Calculate days since last review for priority scoring
                     const daysSinceLastReview = node.lastReviewed
                         ? (new Date().getTime() - new Date(node.lastReviewed).getTime()) / (1000 * 3600 * 24)
-                        : Infinity; 
+                        : Infinity;
 
-                    const needsReviewBasedOnStrength = memoryStrength < 50; 
-                    const needsReviewBasedOnTime =
-                        (memoryStrength < 80 && daysSinceLastReview > 7) || 
-                        (memoryStrength >= 80 && daysSinceLastReview > 30) || 
-                        daysSinceLastReview === Infinity; 
+                    const needsReviewBasedOnStrength = currentMemoryStrength < 50; 
+                    const needsReviewBasedOnTime = isDue;
 
                     if ((node.status === 'needs_review' || needsReviewBasedOnStrength || needsReviewBasedOnTime) && node.understood) {
-                        const epicComponents: EpicStep[] = ['explain', 'probe', 'implement', 'connect'];
-                        const randomEpicComponent = epicComponents[Math.floor(Math.random() * epicComponents.length)];
+                        // Select a weighted EPIC component for more effective review
+                        const epicComponent = getWeightedEpicComponent();
+                        
+                        // Calculate priority score based on multiple factors
+                        const hoursOverdue = isDue 
+                            ? Math.max(0, (new Date().getTime() - reviewDueDate.getTime()) / (1000 * 3600)) 
+                            : 0;
+                            
+                        const priorityScore = 
+                            (node.status === 'needs_review' ? 200 : 0) +   // Explicitly marked gets highest priority
+                            Math.min(hoursOverdue, 200) +                  // More overdue = higher priority (capped)
+                            (100 - currentMemoryStrength);                 // Weaker memory = higher priority
                         
                         reviewableNodes.push({
                             nodeId: node.id,
                             moduleId: fullModule.id, 
-                            priorityScore: (node.status === 'needs_review' ? 200 : 100) - memoryStrength + (daysSinceLastReview > 7 ? Math.min(daysSinceLastReview, 90) : 0),
-                            epicComponentToReview: randomEpicComponent,
+                            priorityScore: priorityScore,
+                            epicComponentToReview: epicComponent,
                             lastReviewed: node.lastReviewed,
-                            currentMemoryStrength: memoryStrength,
+                            currentMemoryStrength: currentMemoryStrength,
+                            reviewDueDate: reviewDueDate
                         });
                     }
                 });
