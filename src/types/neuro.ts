@@ -1,10 +1,10 @@
 import type { ChronicleRunState, Companion as ChronicleCompanion, Quest, PlayerCharacter as ChroniclePlayerCharacter, Spellbook, Item as ChronicleItem, Ability as ChronicleAbility, EntityStats as ChronicleEntityStats, BattleActionRequest, EPICChallenge as ChronicleEPICChallenge, EPICResponse as ChronicleEPICResponse } from './chronicle'; // Import ChronicleRunState
 
-export type LearningPhase = 'reading' | 'download' | 'install' | 'review';
+export type LearningPhase = 'reading' | 'download' | 'install';
 
 export type ModuleType = 'core' | 'pillar' | 'auxiliary' | 'challenge';
 export type ModuleStatus = 'new' | 'in_library' | 'downloading' | 'downloaded' | 'installing' | 'installed';
-export type NodeStatus = 'new' | 'familiar' | 'understood' | 'needs_review';
+export type NodeStatus = 'new' | 'familiar' | 'understood' | 'mastered' | 'needs_review';
 export type NodeType = 'concept' | 'principle' | 'strategy' | 'skill';
 
 // --- Thought Analyzer & Neural Shame Engine Core Types (Codex III) ---
@@ -85,6 +85,10 @@ export interface AnalysisResult {
   domainSpecificIssues: Record<string, Issue[]>; // Keyed by domain ID or area
   overallScore?: number; // May be derived from thoughtQuality or specific rubric
   feedbackSummary?: string; // General feedback from analyzer
+  thoughtPatterns?: string[];
+  cognitiveStrengths?: string[];
+  cognitiveWeaknesses?: string[];
+  recommendations?: string[];
 }
 
 export type ShameCategory = "Compromised" | "Shaky" | "Stable" | "Strong" | "Architect";
@@ -109,6 +113,9 @@ export interface ShameIndexResult {
   vulnerabilities: string[];  // IDs or descriptions of shame triggers most relevant
   growthEdges: GrowthEdge[];
   recommendedChallengeIntensity: number; // 0-100, for next challenge
+  overallScore?: number;      // Alias for score
+  triggers?: string[];        // Alias for vulnerabilities
+  recommendations?: string[]; // Derived from growthEdges
 }
 
 export interface FeedbackOutput {
@@ -116,6 +123,8 @@ export interface FeedbackOutput {
   growthSuggestions?: string[];
   metacognitivePrompts?: string[];
   warningFlags?: string[]; // e.g., "High risk of shame trigger activation"
+  detailedBreakdown?: string[]; // Make it optional
+  suggestions?: string[];  // Alias for growthSuggestions
 }
 
 export interface LearningEvent {
@@ -158,6 +167,7 @@ export interface NodeEPIC {
   implementPrompt: string;
   connectPrompt: string;
   connectTo?: string[]; // Optional for now, as it was added later
+  [key: string]: string | string[] | undefined; // Make it indexable by string keys
 }
 
 export interface Node {
@@ -181,6 +191,8 @@ export interface Node {
     emotionalTheme?: string;
     signatureEncounter?: string; // Could be an encounter ID
   };
+  clarification?: string;
+  example?: string;
 }
 
 export interface Domain {
@@ -231,6 +243,7 @@ export interface WikiModule extends Omit<Module, 'domains'> { // WikiModule migh
   confidenceScore: number; 
   generatedContent: boolean; 
   epicGenerationStatus?: EPICGenerationMetadata;
+  shortDefinition?: string; // Add this property to match usage in the code
 }
 
 
@@ -267,116 +280,123 @@ export interface PlayerCharacterBase {
 
 export interface ActiveReadingSession {
     moduleId: string;
-    domainIndex: number;
-    nodeIndex: number;
+    currentPage: number;
+    totalPages: number;
+    content: string[];
+    domainIndex?: number;
+    nodeIndex?: number;
 }
 
 export type EpicStep = 'explain' | 'probe' | 'implement' | 'connect';
 
 export interface UserInput {
-    text: string;
+    content: string;
+    timestamp?: Date;
+    type?: 'text' | 'voice';
+    text?: string;
+    input?: string;
 }
 export interface AnalysisContext {
-    domain?: string;
+    currentNode: Node;
+    currentDomain: Domain;
+    currentModule: Module;
+    learningPhase: LearningPhase;
+    epicStep?: EpicStep;
+    interactionType?: 'recall' | 'epic_explain' | 'epic_probe' | 'epic_implement' | 'epic_connect' | 'review' | 'chronicle_interaction' | 'diagnostic';
+    componentType?: string;
+    nodeId?: string;
+    moduleId?: string;
     nodeTitle?: string;
     learningObjective?: string;
-    interactionType: 'recall' | 'epic_explain' | 'epic_probe' | 'epic_implement' | 'epic_connect' | 'review' | 'chronicle_interaction' | 'diagnostic';
-    previousAnalysis?: AnalysisResult; 
-    moduleId?: string;
-    nodeId?: string;
-    componentType?: EpicStep | 'battle_action' | 'battle_action_defense' | 'recall' | 'explain' | 'probe' | 'implement' | 'connect' | 'diagnostic' | 'review' | 'chronicle_interaction' | string;
-    encounterId?: string; 
+    encounterId?: string;
 }
 
 // New/Updated types for detailed rubric-based evaluation
 export interface RubricDimensionScore {
-  score: number; // 0.0 - 1.0
-  label: string; // Narrative label, e.g., "Clear and concise," "Lacks depth"
+  label: string;
+  score: number;
+  feedback: string;
 }
 
 export interface RubricScores {
-  clarity: RubricDimensionScore;
-  relevance: RubricDimensionScore;
-  depthOfThought: RubricDimensionScore;
-  domainAlignment: RubricDimensionScore;
-  logicalIntegrity: RubricDimensionScore;
-  specificity: RubricDimensionScore;
-  voiceAppropriateness: RubricDimensionScore;
-  originality: RubricDimensionScore;
+  [key: string]: RubricDimensionScore;
 }
 
 export interface QualityFlags {
-  mimicry: boolean;
-  insufficientLength: boolean;
-  lowCoherence: boolean;
-  // repetition?: boolean; // Can be added later if needed
+  isComplete: boolean;
+  isAccurate: boolean;
+  isRelevant: boolean;
+  isWellStructured: boolean;
+  showsUnderstanding: boolean;
+  mimicry?: boolean;
+  insufficientLength?: boolean;
+  lowCoherence?: boolean;
 }
 
 export interface EvaluationResult {
-  score: number; 
-  overallFeedback: string; // This will be the generic AI feedback
+  score: number;
+  overallFeedback: string;
   isPass: boolean;
-  analysisResult?: AnalysisResult; // From Thought Analyzer (Codex III)
-  shameIndexResult?: ShameIndexResult; // From Neural Shame Engine (Codex III)
-  feedbackOutput?: FeedbackOutput; // Growth suggestions from Shame Engine (Codex III)
-  rubricScores?: RubricScores; // Detailed breakdown from rubric
-  qualityFlags?: QualityFlags; // Flags for specific issues
-  personalityFeedback?: string; // New: Feedback in character's voice
+  rubricScores?: RubricScores;
+  qualityFlags?: QualityFlags;
+  personalityFeedback?: string;
+  analysisResult?: any;
+  shameIndexResult?: any;
+  feedbackOutput?: any;
 }
 
 
 export interface ReviewSessionNode {
+  moduleId: string;
   nodeId: string;
-  moduleId: string; 
-  priorityScore: number;
-  epicComponentToReview: EpicStep; 
-  lastReviewed?: Date; 
+  epicComponentToReview: EpicStep;
+  priorityScore?: number;
+  lastReviewed?: Date;
   currentMemoryStrength?: number;
 }
+
 export interface ActiveReviewSession {
-  sessionId: string;
   nodesToReview: ReviewSessionNode[];
   currentNodeIndex: number;
-  startTime: Date;
+  moduleId: string;
+  epicComponentToReview: EpicStep;
+  sessionId?: string;
+  startTime?: Date;
 }
+
 export interface DiagnosticTest {
     id: string;
-    name: string;
-    level: 'node' | 'domain' | 'module' | 'system';
-    targetId: string;
-    targetName: string;
-    status: 'pending' | 'running' | 'completed' | 'error';
-    prompt?: string;
-    userInput?: string;
-    result?: EvaluationResult;
-    nodeContext?: Node;
+    questions: KnowledgeCheckQuestion[];
+    domain: string;
+    difficulty: number;
 }
 
 export interface UserLearningState {
     modules: Record<string, Module | WikiModule>;
     activeSession: LearningProgress | null;
-    activeChronicleRun: ChronicleRunState | null;
-    playerCharacterBase: PlayerCharacterBase;
+    activeChronicleRun: any | null;
+    playerCharacterBase: any;
     activeReadingSession: ActiveReadingSession | null;
-    currentUserProfile: UserProfile;
+    currentUserProfile: UserProfile | null;
     activeReviewSession: ActiveReviewSession | null;
     isThoughtAnalyzerEnabled: boolean;
-    currentLearningFlow?: 'reading' | 'download' | 'install' | 'review';
-    _version?: string; // Version tracking for schema changes
-    _savedAt?: string; // Timestamp of last save
+    currentLearningFlow?: string;
 }
 
 export interface KnowledgeCheckQuestion {
   id: string;
   question: string;
   options: string[];
-  correctOptionIndex: number;
+  correctAnswer: number;
+  correctOptionIndex?: number; // Alias for correctAnswer
   explanation: string;
 }
 
 export interface KnowledgeCheckSet {
-  nodeId: string;
   questions: KnowledgeCheckQuestion[];
-  completed: boolean;
-  score: number;
+  domain: string;
+  difficulty: number;
+  nodeId?: string;
+  completed?: boolean;
+  score?: number;
 }

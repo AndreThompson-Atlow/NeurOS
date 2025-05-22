@@ -10,10 +10,9 @@ import { AdminPanel } from '@/components/neuro/AdminPanel';
 import { ReviewScreen } from '@/components/neuro/ReviewScreen';
 import { DiagnosticsScreen } from '@/components/neuro/DiagnosticsScreen';
 import { StatusScreen } from '@/components/neuro/StatusScreen';
-import { InfiniteKnowledgeExplorer } from '@/components/neuro/InfiniteKnowledgeExplorer';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { AlertTriangle, Loader2, Swords, Settings, CheckCircle, CornerRightUp, User as UserIconLucide, BookCheck, Activity, BarChart3, Compass, Library, Voicemail, Mic, MicOff, Volume2, VolumeX, MessageSquare, Map as MapIconLucide, Zap, Shield, Brain, Lightbulb, Link as LinkIconLucide, Search, Orbit, HelpCircle, FileText, ListTree, PackageSearch, Microscope, TestTube, Rocket, TrendingUp, Layers, Users as UsersIcon, FileTextIcon } from 'lucide-react';
+import { AlertTriangle, Loader2, Swords, Settings, CheckCircle, CornerRightUp, User, BookCheck, Activity, BarChart3, Compass, Library, Voicemail, Mic, MicOff, Volume2, VolumeX, MessageSquare, Map as MapIconLucide, Zap, Shield, Brain, Lightbulb, Link as LinkIconLucide, Search, Orbit, HelpCircle, FileText, ListTree, PackageSearch, Microscope, TestTube, Rocket, TrendingUp, Layers, Users as UsersIcon, FileTextIcon, RotateCcw } from 'lucide-react';
 import type { Character } from '@/types/characterTypes';
 import { getAllCharacters, getCharacterById } from '@/lib/server/characters';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
@@ -22,7 +21,7 @@ import { ReadingModeDisplay } from '@/components/neuro/ReadingModeDisplay';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { generateReadingDialogue as generateReadingDialogueFlow } from '@/ai/flows/generateReadingDialogueFlow';
-import type { GenerateReadingDialogueOutput, GenerateReadingDialogueInput, DialogueTurn as GenkitDialogueTurn } from '@/ai/flows/types/generateReadingDialogueTypes';
+import type { GenerateReadingDialogueOutput, GenerateReadingDialogueInput } from '@/ai/flows/types/generateReadingDialogueTypes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { getAlignmentStyling, getModuleTypeIcon } from '@/components/neuro/utils';
@@ -37,7 +36,7 @@ export default function Home() {
   const {
     userModules,
     availableDungeons,
-    hasInstalledModules,
+    hasAnyInstalledModules,
     currentModule,
     currentNode,
     currentDomain,
@@ -45,7 +44,6 @@ export default function Home() {
     currentNodeIndex, 
     progress,
     isLoading,
-    isLoadingCustom,
     isLoadingChronicle,
     detailedLoadingProgress,
     probeQuestions,
@@ -55,7 +53,6 @@ export default function Home() {
     activeChronicleRun,
     addModuleToLibrary,
     startModule,
-    createCustomModule,
     submitRecallResponse,
     submitEpicResponse,
     fetchProbeQuestions,
@@ -101,7 +98,7 @@ export default function Home() {
   } = useLearningSession();
 
   const [allAiCharacters, setAllAiCharacters] = useState<Character[]>([]);
-  const [selectedGuideId, setSelectedGuideId] = useState<string>('neuros');
+  const [selectedGuideId] = useState<string>('neuros');
   const [guideCharacter, setGuideCharacter] = useState<Character | null>(null);
   const [isLoadingDialogue, setIsLoadingDialogue] = useState(false);
   const { toast } = useToast();
@@ -109,11 +106,7 @@ export default function Home() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
-  const [customTopic, setCustomTopic] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
-
-
- useEffect(() => {
+  useEffect(() => {
     async function fetchChars() {
       try {
         const chars = await getAllCharacters();
@@ -192,7 +185,7 @@ export default function Home() {
     targetModule: typeof currentModule, 
     targetDomain: typeof currentDomain,
     personalitiesForDialogue: string[],
-    previousDialogueTurns?: GenkitDialogueTurn[]
+    previousDialogueTurns?: { characterId: string; message: string }[]
     ) => {
     if (!targetNode || !targetModule || !targetDomain) { 
       toast({ description: "No active node context for dialogue generation.", variant: "destructive" });
@@ -231,16 +224,6 @@ export default function Home() {
     }
   };
 
-
-  const handleCustomSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (customTopic.trim() && !isLoadingCustom) {
-      createCustomModule(customTopic.trim());
-      setCustomTopic('');
-      setShowCustomInput(false);
-    }
-  };
-
   const renderModuleCard = (module: Module | WikiModule) => (
     <ModuleSelectorCard
         key={module.id}
@@ -256,12 +239,12 @@ export default function Home() {
     const firstModule = modulesToRender[0] as Module; // Cast for alignment
     const alignmentProps = getAlignmentStyling(firstModule.alignmentBias);
     return (
-      <div className="mb-spacing-xl">
-        <h3 className={`module-title ${titleColorClass || alignmentProps.titleColor} ${titleFontClass || alignmentProps.fontClass} border-b border-divider-neuro pb-spacing-sm mb-spacing-lg flex items-center`}>
+      <div className="mb-spacing-xl pb-spacing-lg">
+        <h3 className={`neuro-section-title ${titleColorClass || alignmentProps.titleColor} ${titleFontClass || alignmentProps.fontClass} border-b border-divider-neuro pb-spacing-sm mb-spacing-lg flex items-center`}>
           {icon && <span className="mr-spacing-sm">{icon}</span>}
           {title}
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-spacing-lg">
+        <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-8">
           {modulesToRender.map(renderModuleCard)}
         </div>
       </div>
@@ -292,144 +275,74 @@ export default function Home() {
 
 
   const renderContent = () => {
-    if (isLoadingCustom && currentInteraction === 'initial') {
-        return (
-           <div className="container mx-auto px-spacing-md md:px-spacing-lg text-center flex items-center justify-center min-h-[calc(100vh-10rem)] py-spacing-lg">
-             <Card className="max-w-md mx-auto shadow-lg p-spacing-md" data-alignment="law">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-theme-law text-law-primary-color flex items-center justify-center gap-2">
-                    <Loader2 className="animate-spin text-law-accent-color" /> Generating Custom Module...
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-text-secondary-neuro mb-spacing-sm">Please wait while the AI structures your learning content. This may take a moment.</p>
-                   <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                        <div className="h-full bg-law-primary-color animate-pulse" style={{ width: '100%', animationDuration: '2s' }}></div>
-                    </div>
-                </CardContent>
-             </Card>
-           </div>
-        );
-    }
-
-
     switch (currentInteraction) {
       case 'initial':
         const guideAlignment = guideCharacter?.alignment || 'neutral';
         const guideStyling = getAlignmentStyling(guideAlignment);
 
         return (
-          <div className="container mx-auto px-spacing-sm md:px-spacing-lg py-spacing-md md:py-spacing-lg space-y-spacing-lg max-w-full">
-             <Card data-alignment="neutral" className="w-full mb-spacing-lg md:mb-spacing-xl p-spacing-md sm:p-spacing-lg">
+          <div className="neuro-container neuro-fade-in">
+             <Card data-alignment="neutral" className="neuro-card w-full mb-spacing-lg md:mb-spacing-xl p-spacing-md sm:p-spacing-lg">
               <CardHeader className="pb-spacing-sm sm:pb-spacing-md">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-spacing-sm">
                   <CardTitle className="module-title text-glow-cyan font-theme-neutral">NeuroOS Dashboard</CardTitle>
-                  <div className="flex flex-wrap gap-spacing-sm items-center self-start sm:self-center">
-                    <Button onClick={toggleVoiceMode} variant={isVoiceModeActive ? "default" : "outline"} size="sm" className={`self-end h-9 text-sm ${isVoiceModeActive ? 'btn-neutral' : 'border-neutral-border-color text-neutral-primary-color hover:bg-neutral-surface-color'}`}>
-                        <Voicemail className="mr-2 h-4 w-4"/> {isVoiceModeActive ? "Voice ON" : "Voice OFF"}
-                    </Button>
-                     <Select value={selectedGuideId} onValueChange={setSelectedGuideId}>
-                        <SelectTrigger id="guide-select" className="w-[180px] h-9 text-sm ui-select-trigger">
-                            <SelectValue placeholder="Select Guide" />
-                        </SelectTrigger>
-                        <SelectContent className="ui-select-content">
-                            {allAiCharacters.map(char => (
-                                <SelectItem key={char.id} value={char.id} className="text-sm ui-select-item">
-                                    {char.name} ({char.alignment})
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                  </div>
                 </div>
                 <CardDescription className="secondary-text text-text-secondary-neuro pt-spacing-xs sm:pt-spacing-sm text-base">
                   Your cognitive command center. Manage modules, track progress, and explore new knowledge.
                 </CardDescription>
               </CardHeader>
-               {isVoiceModeActive && voiceTranscript && (
-                <CardContent className="pt-spacing-xs pb-spacing-xs border-t border-divider-neuro">
-                    <p className="text-sm text-text-tertiary-neuro">Last transcript: <span className="italic text-foreground/80">{voiceTranscript}</span></p>
-                </CardContent>
-              )}
             </Card>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacing-lg md:gap-spacing-xl">
-                <div className="lg:col-span-3 space-y-spacing-lg md:space-y-spacing-xl">
-                     <Card data-alignment={guideStyling.dataAlignment} className={cn("dashboard-widget p-spacing-md", guideStyling.borderColorClass, "border-l-4")}>
+            <div className="neuro-layout-sidebar">
+                <div className="neuro-sidebar space-y-spacing-lg md:space-y-spacing-xl">
+                     <Card data-alignment={guideStyling.dataAlignment} className={cn("neuro-card p-spacing-md", guideStyling.borderColorClass, "border-l-4")}>
                       <CardHeader className="p-0 pb-spacing-xs">
                         <CardTitle className={cn("domain-header flex items-center", guideStyling.titleColor, guideStyling.fontClass)}>
                           {guideCharacter?.avatarUrl && <Image src={guideCharacter.avatarUrl} alt={guideCharacter.name} width={32} height={32} className="rounded-full mr-spacing-xs border-2 border-current" data-ai-hint={`${guideCharacter.name} character`}/>}
-                          Your Guide: {guideCharacter?.name || "Selected Guide"}
+                          Your Guide: {guideCharacter?.name || "Neuros"}
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-0"><p className="secondary-text italic leading-relaxed text-sm">{guideCharacter?.description || "Select a guide to assist your journey."}</p></CardContent> 
+                      <CardContent className="p-0"><p className="secondary-text italic leading-relaxed text-sm">{guideCharacter?.description || "Your personal AI guide through the NeuroOS learning experience."}</p></CardContent> 
                     </Card>
-                    {/* Moved Core Activities here, above other nav buttons */}
-                    <Card data-alignment="neutral" className="dashboard-widget p-spacing-md">
-                         <CardHeader className="p-0 pb-spacing-xs">
-                            <CardTitle className="domain-header text-glow-cyan font-theme-neutral flex items-center">
-                             <Activity className="mr-spacing-sm text-neutral-accent-color"/> Core Activities
+                    
+                    <Card className="neuro-card neuro-card-law p-spacing-md" data-alignment="law">
+                        <CardHeader className="p-0 pb-spacing-xs">
+                            <CardTitle className="domain-header text-glow-gold flex items-center">
+                                <FileTextIcon size={20} className="mr-spacing-xs text-law-accent-color"/>
+                                Personal Codex
                             </CardTitle>
-                         </CardHeader>
-                         <CardContent className="space-y-spacing-sm p-0 pt-spacing-sm">
-                            <Button 
-                                variant="secondary" 
-                                onClick={() => setCurrentInteraction('reviewing')} 
-                                className={cn("w-full justify-start text-left text-sm py-2.5 px-3", getAlignmentStyling('neutral').buttonClass, "hover:bg-neutral-primary-color/80 whitespace-normal h-auto")}
-                                disabled={!hasStandardReviewNodes && !hasManualReviewNodes}
-                            >
-                                <BookCheck className="mr-spacing-xs flex-shrink-0"/> Review Due Nodes
-                            </Button>
-                            <Button variant="secondary" onClick={() => setCurrentInteraction('chronicle')} className={cn("w-full justify-start text-left text-sm py-2.5 px-3", getAlignmentStyling('chaos').buttonClass, "hover:bg-chaos-primary-color/80 whitespace-normal h-auto")}>
-                                <Swords className="mr-spacing-xs flex-shrink-0"/> Explore Neuroverse
-                            </Button>
-                         </CardContent>
+                            <CardDescription className="secondary-text text-sm">Your evolving knowledge architecture.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-0 pt-spacing-sm text-sm text-muted-foreground italic">
+                            <p>Review your Sovereign Core principles, track Meta-Integrity, and refine your Personal Constitution. Coming soon!</p>
+                        </CardContent>
                     </Card>
-
-                    <div className="space-y-spacing-sm md:space-y-spacing-md pt-spacing-md border-t border-divider-neuro">
-                        <Link href="/cognitive-map" passHref>
-                          <Button variant="outline" className={cn("w-full justify-start text-left text-sm py-3 px-3", getAlignmentStyling('law').borderColorClass, "text-law-primary-color hover:bg-law-surface-color hover:text-law-primary-color/80 border-2 hover:scale-[1.01] whitespace-normal h-auto")}>
-                            <MapIconLucide className="mr-spacing-xs flex-shrink-0"/>Cognitive Map
-                          </Button>
-                        </Link>
-                        <Link href="/learning-journey" passHref>
-                           <Button variant="outline" className={cn("w-full justify-start text-left text-sm py-3 px-3", getAlignmentStyling('chaos').borderColorClass, "text-chaos-primary-color hover:bg-chaos-surface-color hover:text-chaos-primary-color/80 border-2 hover:scale-[1.01] whitespace-normal h-auto")}>
-                            <TrendingUp className="mr-spacing-xs flex-shrink-0"/>Learning Journey
-                          </Button>
-                        </Link>
-                        <Link href="/memory-strength" passHref>
-                           <Button variant="outline" className={cn("w-full justify-start text-left text-sm py-3 px-3", getAlignmentStyling('neutral').borderColorClass, "text-neutral-primary-color hover:bg-neutral-surface-color hover:text-neutral-primary-color/80 border-2 hover:scale-[1.01] whitespace-normal h-auto")}>
-                            <Layers className="mr-spacing-xs flex-shrink-0"/>Memory Strength
-                          </Button>
-                        </Link>
-                    </div>
                 </div>
                 
-                <div className="lg:col-span-6 space-y-spacing-lg md:space-y-spacing-xl">
+                <div className="neuro-main-content space-y-spacing-lg md:space-y-spacing-xl">
                     <Tabs defaultValue="library" className="w-full">
-                         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-spacing-lg md:mb-spacing-xl ui-tabs-list p-1.5">
+                         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 mb-spacing-lg md:mb-spacing-xl ui-tabs-list p-1.5">
                            <TabsTrigger value="library" className="ui-tabs-trigger py-2.5 text-sm">My Library</TabsTrigger>
                            <TabsTrigger value="explore" className="ui-tabs-trigger py-2.5 text-sm">Explore Modules</TabsTrigger>
-                           <TabsTrigger value="custom" className="ui-tabs-trigger py-2.5 text-sm">Create Custom</TabsTrigger>
                          </TabsList>
 
                         <TabsContent value="library" className="space-y-spacing-lg md:space-y-spacing-xl">
-                             <h3 className="module-title text-neutral-primary-color font-theme-neutral border-b border-divider-neuro pb-spacing-sm mb-spacing-md">Active & Ready</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-spacing-lg md:gap-spacing-xl">
+                             <h3 className="neuro-section-title text-neutral-primary-color font-theme-neutral">Active & Ready</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-8">
                                 {activeOrReadyModules.length > 0 ? (
                                     activeOrReadyModules.map(renderModuleCard)
                                 ) : (
-                                     <Card className="md:col-span-full p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
+                                     <Card className="md:col-span-full neuro-card p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
                                         <p className="secondary-text italic">No modules currently active or ready. Add some from 'Explore'!</p>
                                     </Card>
                                 )}
                             </div>
-                              <h3 className="module-title text-law-primary-color font-theme-law border-b border-divider-neuro pb-spacing-sm mt-spacing-xl mb-spacing-md">Completed Modules</h3>
-                             <div className="grid grid-cols-1 md:grid-cols-2 gap-spacing-lg md:gap-spacing-xl">
+                              <h3 className="neuro-section-title text-law-primary-color font-theme-law">Completed Modules</h3>
+                             <div className="grid grid-cols-1 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2 gap-8">
                                  {installedModules.length > 0 ? (
                                     installedModules.map(renderModuleCard)
                                  ) : (
-                                     <Card className="md:col-span-full p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
+                                     <Card className="md:col-span-full neuro-card p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
                                         <p className="secondary-text italic">No modules completed yet. Keep learning!</p>
                                     </Card>
                                  )}
@@ -445,63 +358,16 @@ export default function Home() {
                             {renderModuleSection("Challenge Modules", exploreChallengeModules, getModuleTypeIcon('challenge'), getAlignmentStyling(exploreChallengeModules[0]?.alignmentBias || 'neutral').titleColor || 'text-chaos-primary-color', getAlignmentStyling(exploreChallengeModules[0]?.alignmentBias || 'neutral').fontClass || 'font-theme-chaos')}
 
                             {allExploreModulesEmpty && (
-                                 <Card className="md:col-span-full p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
+                                 <Card className="md:col-span-full neuro-card p-spacing-lg md:p-spacing-xl text-center bg-card/50 border-border/30">
                                     <p className="secondary-text italic">All available modules are in your library or completed!</p>
                                  </Card>
                              )}
                         </TabsContent>
-
-                        <TabsContent value="custom">
-                           <Card className="max-w-lg mx-auto shadow-cyan-md p-spacing-lg md:p-spacing-xl" data-alignment="law">
-                             <CardHeader className="pb-spacing-md md:pb-spacing-lg">
-                               <CardTitle className="module-title text-law-primary-color font-theme-law">Create a Custom Module</CardTitle>
-                               <CardDescription className="secondary-text">Enter a topic, and NeuroOS will forge a personalized learning module.</CardDescription>
-                             </CardHeader>
-                             <CardContent>
-                               {showCustomInput ? (
-                                 <form onSubmit={handleCustomSubmit} className="space-y-spacing-md md:space-y-spacing-lg">
-                                   <div className="space-y-spacing-sm">
-                                     <Label htmlFor="custom-topic" className="text-text-secondary-neuro">Learning Topic</Label>
-                                     <Input
-                                       id="custom-topic"
-                                       type="text"
-                                       value={customTopic}
-                                       onChange={(e) => setCustomTopic(e.target.value)}
-                                       placeholder="e.g., Quantum Entanglement, Stoic Philosophy"
-                                       required
-                                       className="ui-input"
-                                       disabled={isLoadingCustom}
-                                     />
-                                   </div>
-                                   <div className="flex gap-spacing-md">
-                                     <Button type="submit" variant="law" className="flex-1 btn-law" disabled={isLoadingCustom || !customTopic.trim()}>
-                                       {isLoadingCustom ? (
-                                         <>
-                                           <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> Generating...
-                                         </>
-                                       ) : (
-                                         <><Rocket className="mr-spacing-xs"/>Generate Module</>
-                                       )}
-                                     </Button>
-                                     <Button variant="outline" onClick={() => setShowCustomInput(false)} disabled={isLoadingCustom} className="border-law-border-color text-law-primary-color hover:bg-law-surface-color">
-                                       Cancel
-                                     </Button>
-                                   </div>
-                                 </form>
-                               ) : (
-                                 <Button onClick={() => setShowCustomInput(true)} variant="law" className="w-full btn-law" disabled={isLoadingCustom}>
-                                  <Rocket className="mr-2"/> Enter Topic to Generate
-                                 </Button>
-                               )}
-                               <p className="text-xs text-text-tertiary-neuro mt-5 text-center">Note: AI generation may take a moment. Be specific with your topic for best results.</p>
-                             </CardContent>
-                           </Card>
-                        </TabsContent>
                     </Tabs>
                 </div>
 
-                 <div className="lg:col-span-3 space-y-spacing-lg md:space-y-spacing-xl">
-                     <Card data-alignment="neutral" className="dashboard-widget p-spacing-md"> 
+                 <div className="neuro-sidebar space-y-spacing-lg md:space-y-spacing-xl">
+                     <Card data-alignment="neutral" className="neuro-card neuro-card-neutral p-spacing-md"> 
                         <CardHeader className="p-0 pb-spacing-xs">
                             <CardTitle className="domain-header text-glow-cyan font-theme-neutral flex items-center">
                             <Orbit className="mr-spacing-sm text-neutral-accent-color"/> Action Center
@@ -509,55 +375,78 @@ export default function Home() {
                              <CardDescription className="secondary-text text-text-secondary-neuro pt-spacing-xs text-sm">Expand your cognitive horizons.</CardDescription> 
                         </CardHeader>
                         <CardContent className="space-y-spacing-sm p-0 pt-spacing-sm">
-                             <Button variant="secondary" onClick={() => setCurrentInteraction('explore_infinite')} className={cn("w-full justify-start text-left text-sm py-2.5 px-3 whitespace-normal h-auto", getAlignmentStyling('neutral').buttonClass, "hover:bg-neutral-primary-color/80")}>
-                                <Compass className="mr-spacing-xs flex-shrink-0"/> Infinite Knowledge Explorer
+                            <Button 
+                                variant="default" 
+                                onClick={() => setCurrentInteraction('status_viewing')} 
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                            >
+                                <Activity size={16} className="mr-spacing-sm flex-shrink-0 text-neutral-accent-color" />
+                                <div>
+                                    <span className="font-semibold">Profile & Progress</span>
+                                    <p className="text-xs opacity-80 mt-0.5">View your detailed profile and learning progress</p>
+                                </div>
+                            </Button>
+                            
+                            <Button 
+                                variant="default" 
+                                onClick={() => setCurrentInteraction('reviewing')} 
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                disabled={!hasStandardReviewNodes && !hasManualReviewNodes}
+                            >
+                                <BookCheck size={16} className="mr-spacing-sm flex-shrink-0 text-law-accent-color" />
+                                <div>
+                                    <span className="font-semibold">Knowledge Review</span>
+                                    <p className="text-xs opacity-80 mt-0.5">Strengthen memories with spaced repetition</p>
+                                </div>
+                            </Button>
+                            
+                            <Button 
+                                variant="default" 
+                                onClick={() => setCurrentInteraction('chronicle')} 
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                disabled={!hasAnyInstalledModules}
+                            >
+                                <Swords size={16} className="mr-spacing-sm flex-shrink-0 text-chaos-accent-color" />
+                                <div>
+                                    <span className="font-semibold">Neuroverse Adventures</span>
+                                    <p className="text-xs opacity-80 mt-0.5">Test your knowledge in interactive scenarios</p>
+                                </div>
+                            </Button>
+                            
+                            <Button 
+                                variant="default" 
+                                onClick={() => setCurrentInteraction('diagnosing')} 
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                            >
+                                <TestTube size={16} className="mr-spacing-sm flex-shrink-0 text-primary" />
+                                <div>
+                                    <span className="font-semibold">Diagnostics</span>
+                                    <p className="text-xs opacity-80 mt-0.5">Analyze your cognitive patterns</p>
+                                </div>
+                            </Button>
+                            
+                            <Button 
+                                variant="default" 
+                                onClick={() => setCurrentInteraction('admin')} 
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                            >
+                                <Settings size={16} className="mr-spacing-sm flex-shrink-0 text-neutral-accent-color" />
+                                <div>
+                                    <span className="font-semibold">System Admin</span>
+                                    <p className="text-xs opacity-80 mt-0.5">Manage modules and system settings</p>
+                                </div>
                             </Button>
                         </CardContent>
                     </Card>
-                    <Card className="dashboard-widget p-spacing-md" data-alignment="neutral">
-                        <CardHeader className="p-0 pb-spacing-xs">
-                            <CardTitle className="domain-header text-glow-cyan flex items-center">
-                                <UsersIcon size={20} className="mr-spacing-xs text-neutral-accent-color"/>
-                                Community Hub (Placeholder)
-                            </CardTitle>
-                            <CardDescription className="secondary-text text-sm">Connect with other NeuroOS users.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 pt-spacing-sm text-sm text-muted-foreground italic">
-                            <p>Share learning paths, discuss insights, and collaborate on Chronicle challenges. Coming soon!</p>
-                        </CardContent>
-                    </Card>
-                     <Card className="dashboard-widget p-spacing-md" data-alignment="law">
-                        <CardHeader className="p-0 pb-spacing-xs">
-                            <CardTitle className="domain-header text-glow-gold flex items-center">
-                                <FileTextIcon size={20} className="mr-spacing-xs text-law-accent-color"/>
-                                Personal Codex (Placeholder)
-                            </CardTitle>
-                             <CardDescription className="secondary-text text-sm">Your evolving knowledge architecture.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-0 pt-spacing-sm text-sm text-muted-foreground italic">
-                            <p>Review your Sovereign Core principles, track Meta-Integrity, and refine your Personal Constitution. Coming soon!</p>
-                        </CardContent>
-                    </Card>
                 </div>
-            </div>
-            <div className="flex flex-wrap gap-spacing-md items-center justify-end pt-spacing-lg md:pt-spacing-xl border-t border-divider-neuro mt-spacing-lg md:mt-spacing-xl">
-                <Button variant="outline" onClick={() => setCurrentInteraction('diagnosing')} className="border-neutral-border-color text-neutral-primary-color hover:bg-neutral-surface-color text-sm py-2.5 px-4">
-                    <Activity className="mr-spacing-sm" /> Diagnostics
-                </Button>
-                 <Button variant="outline" onClick={() => setCurrentInteraction('status_viewing')} className="border-neutral-border-color text-neutral-primary-color hover:bg-neutral-surface-color text-sm py-2.5 px-4">
-                    <BarChart3 className="mr-spacing-sm" /> View Status
-                </Button>
-                <Button variant="outline" size="icon" onClick={() => setCurrentInteraction('admin')} title="Admin Panel" className="border-neutral-border-color text-neutral-primary-color hover:bg-neutral-surface-color h-10 w-10">
-                    <Settings />
-                </Button>
             </div>
           </div>
         );
       case 'learning':
         if (!currentModule || !currentNode) {
           return (
-             <div className="container mx-auto px-spacing-md md:px-spacing-lg text-center flex items-center justify-center min-h-[calc(100vh-10rem)] py-spacing-lg">
-               <Card className="max-w-md mx-auto shadow-lg p-spacing-md" data-alignment="chaos">
+             <div className="neuro-container neuro-fade-in flex items-center justify-center min-h-[calc(100vh-10rem)]">
+               <Card className="neuro-card neuro-card-chaos max-w-md mx-auto shadow-lg p-spacing-md" data-alignment="chaos">
                  <CardHeader>
                    <CardTitle className="phase-header text-chaos-primary-color font-theme-chaos flex items-center justify-center gap-spacing-sm">
                       <AlertTriangle/> Loading Session...
@@ -565,14 +454,14 @@ export default function Home() {
                  </CardHeader>
                  <CardContent>
                    <p className="secondary-text text-chaos-text-on-surface-color mb-spacing-sm text-base">Preparing the learning environment. If this persists, try resetting.</p>
-                   <Button variant="destructive" onClick={resetSession} className="btn-chaos text-sm py-2.5">Cancel & Reset</Button>
+                   <Button variant="destructive" onClick={resetSession} className="btn-chaos neuro-button text-sm">Cancel & Reset</Button>
                  </CardContent>
                </Card>
              </div>
           );
         }
         return (
-          <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg space-y-spacing-lg">
+          <div className="neuro-container neuro-fade-in space-y-spacing-lg">
             <ProgressBar module={currentModule} progress={progress} />
             <NodeDisplay
               node={currentNode}
@@ -598,7 +487,7 @@ export default function Home() {
               isVoiceModeActive={isVoiceModeActive}
             />
              <div className="flex justify-end mt-spacing-lg">
-                 <Button variant="outline" onClick={resetSession} className="border-destructive text-destructive hover:bg-destructive/10 text-sm py-2.5">End Learning Session</Button>
+                 <Button variant="outline" onClick={resetSession} className="neuro-button border-destructive text-destructive hover:bg-destructive/10 text-sm">End Learning Session</Button>
              </div>
           </div>
         );
@@ -621,7 +510,7 @@ export default function Home() {
                 detailedLoadingProgress={detailedLoadingProgress}
                 onRetryLoad={retryDungeonLoad}
                 evaluationResult={evaluationResult}
-                hasInstalledModules={hasInstalledModules}
+                hasInstalledModules={hasAnyInstalledModules}
                 guideCharacterId={selectedGuideId}
                 guideCharacter={guideCharacter}
                 onStartRun={startChronicleRun}
@@ -638,7 +527,7 @@ export default function Home() {
          );
       case 'admin':
         return (
-          <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg">
+          <div className="neuro-container neuro-fade-in py-spacing-lg">
             <AdminPanel
                 modules={userModules}
                 onSetModuleStatus={admin_setModuleStatus}
@@ -650,16 +539,15 @@ export default function Home() {
         );
       case 'reviewing':
         return (
-            <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg">
+            <div className="neuro-container neuro-fade-in py-spacing-lg">
                 <ReviewScreen
-                    currentInteraction={currentInteraction}
                     onExit={() => setCurrentInteraction('initial')}
                 />
             </div>
         );
       case 'diagnosing':
         return (
-            <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg">
+            <div className="neuro-container neuro-fade-in py-spacing-lg">
                 <DiagnosticsScreen
                     modules={userModules}
                     onExit={() => setCurrentInteraction('initial')}
@@ -668,7 +556,7 @@ export default function Home() {
         );
       case 'status_viewing':
         return (
-             <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg">
+             <div className="neuro-container neuro-fade-in py-spacing-lg">
                 <StatusScreen
                     modules={userModules}
                     playerCharacter={playerCharacterBase}
@@ -677,19 +565,10 @@ export default function Home() {
                 />
             </div>
         );
-      case 'explore_infinite':
-        return (
-          <div className="container mx-auto px-spacing-md md:px-spacing-lg py-spacing-lg">
-            <InfiniteKnowledgeExplorer
-                onAddModuleToLibrary={addModuleToLibrary}
-                onExit={() => setCurrentInteraction('initial')}
-            />
-          </div>
-        );
       case 'reading':
         if (!activeReadingSession || !currentModule || !currentNode || !currentDomain ) {
             return (
-                <div className="container mx-auto px-spacing-md md:px-spacing-lg text-center text-destructive py-spacing-lg">Error: Could not load reading content.</div>
+                <div className="neuro-container neuro-fade-in text-center text-destructive py-spacing-lg">Error: Could not load reading content.</div>
             );
         }
         return (
@@ -720,8 +599,8 @@ export default function Home() {
         const finishedModuleId = progress?.currentModuleId;
         const finishedModule = finishedModuleId ? userModules[finishedModuleId] : null;
         return (
-           <div className="container mx-auto px-spacing-md md:px-spacing-lg text-center flex items-center justify-center min-h-[calc(100vh-10rem)] py-spacing-lg">
-            <Card className="max-w-lg mx-auto shadow-lg p-spacing-md" data-alignment="law">
+           <div className="neuro-container neuro-fade-in">
+            <Card className="neuro-card max-w-lg mx-auto shadow-lg p-spacing-md" data-alignment="law">
                <CardHeader>
                  <CardTitle className="phase-header text-law-primary-color font-theme-law flex items-center justify-center gap-spacing-sm">
                     <CheckCircle className="text-law-accent-color" size={32}/>
@@ -744,8 +623,8 @@ export default function Home() {
         console.error("Unexpected interaction state:", currentInteraction);
         setCurrentInteraction('initial');
         return (
-             <div className="container mx-auto px-spacing-md md:px-spacing-lg text-center flex items-center justify-center min-h-[calc(100vh-10rem)] py-spacing-lg">
-               <Card className="max-w-md mx-auto shadow-lg p-spacing-md" data-alignment="chaos">
+             <div className="neuro-container neuro-fade-in">
+               <Card className="neuro-card max-w-md mx-auto shadow-lg p-spacing-md" data-alignment="chaos">
                  <CardHeader>
                    <CardTitle className="phase-header text-chaos-primary-color font-theme-chaos flex items-center justify-center gap-spacing-sm">
                       <AlertTriangle/> System Error

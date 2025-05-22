@@ -219,44 +219,40 @@ export function DiagnosticsScreen({ modules, onExit }: DiagnosticsScreenProps) {
     }
   };
 
-  const renderTermsWithDefinitions = (terms: string[], title: string) => (
-    <div>
-        <h4 className="font-semibold text-sm mb-1 text-glow-cyan">{title}</h4>
-        <TooltipProvider delayDuration={100}>
-            <div className="flex flex-wrap gap-1 mt-1">
-                {terms.map(term => {
-                    const definition = getDefinition(term);
-                    return (
-                        <Tooltip key={term}>
-                            <TooltipTrigger asChild>
-                                <Badge 
-                                    variant="secondary" 
-                                    className="cursor-pointer bg-muted/70 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs px-1.5 py-0.5"
-                                    onClick={() => handleTermClick(term)}
-                                >
-                                    {term}
-                                </Badge>
-                            </TooltipTrigger>
-                            {!isMobile && definition && (
-                                <TooltipContent side="top" className="max-w-xs text-xs bg-popover text-popover-foreground border-border p-1.5 rounded-md shadow-cyan-sm">
-                                    <p className="font-semibold text-secondary">{term.charAt(0).toUpperCase() + term.slice(1)}</p>
-                                    <p>{definition}</p>
-                                </TooltipContent>
-                            )}
-                        </Tooltip>
-                    );
-                })}
-            </div>
-        </TooltipProvider>
-        {isMobile && activeTermDefinition && (
-            <div className="mt-2 p-2 bg-muted/50 border border-border/30 rounded-md text-xs text-foreground/90">
-                {activeTermDefinition}
-            </div>
+  const renderTermsWithDefinitions = (terms: string[], title: string) => {
+    if (!terms || terms.length === 0) return null;
+    return (
+      <div className="neuro-section">
+        <h4 className="neuro-text-subheading mb-spacing-xs">{title}</h4>
+        <div className="flex flex-wrap gap-spacing-xs">
+          {terms.map(term => {
+            const definition = getDefinition(term);
+            const isActive = activeTermDefinition === term;
+            
+            return (
+              <Badge 
+                key={term} 
+                variant={isActive ? "outline" : "secondary"}
+                className={`cursor-pointer text-xs px-spacing-xs py-[1px] transition-colors 
+                  ${isActive ? "bg-accent text-accent-foreground" : "hover:bg-muted"}`}
+                onClick={() => definition && setActiveTermDefinition(isActive ? null : term)}
+              >
+                {term}
+              </Badge>
+            );
+          })}
+        </div>
+        {activeTermDefinition && (
+          <div className="mt-spacing-sm p-spacing-sm text-sm bg-muted/30 rounded-md">
+            <p className="font-semibold">{activeTermDefinition}</p>
+            <p>{getDefinition(activeTermDefinition)}</p>
+          </div>
         )}
-    </div>
-);
+      </div>
+    );
+  };
 
-const getLevelIcon = (level: DiagnosticLevel) => {
+  const getLevelIcon = (level: DiagnosticLevel) => {
     switch(level) {
         case 'node': return <FileText size={16} className="mr-2 text-secondary"/>;
         case 'domain': return <ListTree size={16} className="mr-2 text-primary"/>;
@@ -264,167 +260,301 @@ const getLevelIcon = (level: DiagnosticLevel) => {
         case 'system': return <Settings2 size={16} className="mr-2 text-destructive"/>;
         default: return <Brain size={16} className="mr-2 text-muted-foreground"/>;
     }
-};
+  };
 
-const completedTestsCount = diagnosticQueue.filter(t => t.status === 'completed' || t.status === 'error').length;
-const totalTestsCount = diagnosticQueue.length;
-const overallProgress = totalTestsCount > 0 ? (completedTestsCount / totalTestsCount) * 100 : 0;
+  const completedTestsCount = diagnosticQueue.filter(t => t.status === 'completed' || t.status === 'error').length;
+  const totalTestsCount = diagnosticQueue.length;
+  const overallProgress = totalTestsCount > 0 ? (completedTestsCount / totalTestsCount) * 100 : 0;
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <Card className="shadow-cyan-md" data-alignment="neutral">
-        <CardHeader className="bg-muted/30 p-4 rounded-t-lg border-b">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-display text-glow-cyan flex items-center gap-2">
-              <Microscope size={24} className="text-secondary" /> Cognitive Diagnostics Suite {/* Changed icon */}
-            </CardTitle>
-            <Button variant="outline" size="sm" onClick={() => { clearEvaluationResult(); onExit();}}>
-              <ArrowLeft size={16} className="mr-1" /> Dashboard
-            </Button>
-          </div>
-          <CardDescription className="text-muted-foreground/80">
-            Configure and run diagnostic tests to assess cognitive integration and identify growth areas. Use this system to unit test your understanding.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-4 space-y-6">
-          <Card className="border-border/50 bg-card/90">
-            <CardHeader><CardTitle className="text-lg text-glow-cyan">Test Configuration</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                <div className="space-y-1">
-                  <Label htmlFor="diag-level" className="text-sm font-medium text-muted-foreground">Diagnostic Level:</Label>
-                  <Select value={selectedLevel} onValueChange={(val) => { setSelectedLevel(val as DiagnosticLevel); setSelectedTargetId(''); }}>
-                    <SelectTrigger id="diag-level" className="ui-select-trigger"><SelectValue placeholder="Select Level" /></SelectTrigger>
-                    <SelectContent className="ui-select-content">
-                      <SelectItem value="node" className="ui-select-item flex items-center gap-2"><FileText size={14} className="text-secondary"/>Node</SelectItem>
-                      <SelectItem value="domain" className="ui-select-item flex items-center gap-2"><ListTree size={14} className="text-primary"/>Domain</SelectItem>
-                      <SelectItem value="module" className="ui-select-item flex items-center gap-2"><PackageSearch size={14} className="text-yellow-400"/>Module</SelectItem>
-                      <SelectItem value="system" className="ui-select-item flex items-center gap-2"><Settings2 size={14} className="text-destructive"/>System-Wide</SelectItem>
+    <div className="neuro-fade-in">
+      <div className="flex items-center justify-between mb-spacing-lg">
+        <h2 className="neuro-page-title">Diagnostic Tests</h2>
+        <Button onClick={onExit} variant="outline" className="neuro-button">
+          <ArrowLeft className="mr-spacing-sm" /> Back to Dashboard
+        </Button>
+      </div>
+
+      <div className="neuro-layout-sidebar gap-spacing-lg mb-spacing-xl">
+        <div className="neuro-sidebar space-y-spacing-lg">
+          <Card className="neuro-card neuro-card-neutral shadow-sm">
+            <CardHeader className="pb-spacing-sm">
+              <CardTitle className="neuro-text-heading flex items-center gap-spacing-sm">
+                <TestTube className="text-neutral-accent-color" />
+                Create Diagnostic
+              </CardTitle>
+              <CardDescription>
+                Configure a new diagnostic test
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-spacing-md">
+              <div className="neuro-input-group">
+                <Label htmlFor="diagnostic-level" className="neuro-label">Test Level</Label>
+                <Select value={selectedLevel} onValueChange={(value) => setSelectedLevel(value as DiagnosticLevel)}>
+                  <SelectTrigger id="diagnostic-level" className="neuro-input">
+                    <SelectValue placeholder="Select level..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="node">Node</SelectItem>
+                    <SelectItem value="domain">Domain</SelectItem>
+                    <SelectItem value="module">Module</SelectItem>
+                    <SelectItem value="system">System-Wide</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedLevel && selectedLevel !== 'system' && (
+                <div className="neuro-input-group">
+                  <Label htmlFor="diagnostic-target" className="neuro-label">Target {selectedLevel.charAt(0).toUpperCase() + selectedLevel.slice(1)}</Label>
+                  <Select 
+                    value={selectedTargetId} 
+                    onValueChange={setSelectedTargetId} 
+                    disabled={!selectedLevel || selectedLevel === 'system'}
+                  >
+                    <SelectTrigger id="diagnostic-target" className="neuro-input">
+                      <SelectValue placeholder="Select target..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getSelectOptions().map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                {selectedLevel && selectedLevel !== 'system' && (
-                  <div className="space-y-1">
-                    <Label htmlFor="diag-target" className="text-sm font-medium text-muted-foreground">Target:</Label>
-                    <Select value={selectedTargetId} onValueChange={setSelectedTargetId}>
-                      <SelectTrigger id="diag-target" className="ui-select-trigger"><SelectValue placeholder={`Select ${selectedLevel || 'Target'}`} /></SelectTrigger>
-                      <SelectContent className="ui-select-content max-h-60">
-                        <ScrollArea>
-                            {getSelectOptions().map(opt => <SelectItem key={opt.value} value={opt.value} className="ui-select-item truncate">{opt.label}</SelectItem>)}
-                        </ScrollArea>
-                        </SelectContent>
-                    </Select>
-                  </div>
-                )}
-                 {selectedLevel === 'system' && (
-                     <div className="space-y-1 md:col-span-1 flex items-end">
-                        <p className="text-sm text-muted-foreground italic">System-wide diagnostics assess overall integration.</p>
-                    </div>
-                 )}
-              </div>
-              <Button onClick={addTestToQueue} disabled={!selectedLevel || (selectedLevel !== 'system' && !selectedTargetId)} variant="secondary" className="w-full md:w-auto">
-                <TestTube size={16} className="mr-2"/>Add Test to Queue
+              )}
+
+              <Button 
+                onClick={addTestToQueue} 
+                disabled={!selectedLevel || (selectedLevel !== 'system' && !selectedTargetId)}
+                className="neuro-button w-full"
+              >
+                <PlayCircle className="mr-spacing-sm" /> Add to Queue
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="border-border/50 bg-card/90">
-            <CardHeader className="pb-3">
-                <div className="flex justify-between items-center">
-                    <CardTitle className="text-lg text-glow-cyan">Diagnostic Test Queue ({diagnosticQueue.filter(t=>t.status==='pending').length} Pending / {diagnosticQueue.length} Total)</CardTitle>
-                    <Button onClick={handleRunAllTests} disabled={diagnosticQueue.length === 0 || diagnosticQueue.every(t => t.status !== 'pending')} variant="primary" size="sm">
-                        <PlayCircle size={16} className="mr-2"/> Run Pending Tests
-                    </Button>
-                </div>
-                 {totalTestsCount > 0 && (
-                    <div className="mt-2">
-                        <Label className="text-xs text-muted-foreground">Overall Progress:</Label>
-                        <Progress value={overallProgress} className="h-2 mt-1" variant={overallProgress === 100 ? "law" : "default"} />
-                    </div>
-                )}
+          <Card className="neuro-card shadow-sm">
+            <CardHeader className="pb-spacing-sm">
+              <CardTitle className="neuro-text-heading flex items-center gap-spacing-sm">
+                <Activity className="text-primary" />
+                Queue Status
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              {diagnosticQueue.length === 0 && <p className="text-muted-foreground italic text-center py-4">No tests queued. Configure tests above.</p>}
-              <ScrollArea className="h-[calc(100vh-550px)] pr-2 space-y-3"> {/* Adjusted height */}
-                {diagnosticQueue.map((test, index) => (
-                  <Card key={test.id} className={`mb-3 ${test.id === currentTest?.id && currentTest?.status === 'running' ? 'ring-2 ring-primary shadow-cyan-md' : 'border-border/30 opacity-80 hover:opacity-100'}`}>
-                    <CardHeader className="p-3 flex flex-row justify-between items-center bg-muted/20 rounded-t-md border-b border-border/20">
-                      <div className="flex items-center">
-                        {getLevelIcon(test.level)}
-                        <CardTitle className="text-md">{test.targetName}</CardTitle>
-                      </div>
-                      <Badge variant={test.status === 'completed' ? (test.result?.isPass ? 'default' : 'destructive') : test.status === 'running' ? 'secondary' : 'outline'} className={`text-xs ${test.status === 'completed' && test.result?.isPass ? 'bg-primary text-primary-foreground' : ''}`}>
-                        {test.status}
-                        {test.status === 'completed' && test.result && ` (${test.result.score}%)`}
-                      </Badge>
-                    </CardHeader>
-                    
-                    {/* Active Test UI */}
-                    {currentTest && test.id === currentTest.id && test.status === 'running' && test.prompt && !test.result && (
-                      <CardContent className="p-3 border-t border-border/20">
-                        {currentTest.nodeContext && (
-                           <Card className="p-3 mb-3 bg-muted/20 border border-border/30 rounded-md text-xs">
-                             <CardHeader className='p-0 pb-1'>
-                                <CardTitle className="text-sm mb-0.5 text-glow-cyan">Context: {currentTest.nodeContext.title}</CardTitle>
-                             </CardHeader>
-                             <CardContent className='p-0'>
-                                <p className="text-muted-foreground/80 text-xxs mb-1">{currentTest.nodeContext.shortDefinition}</p>
-                                {currentTest.nodeContext.keyTerms && currentTest.nodeContext.keyTerms.length > 0 && renderTermsWithDefinitions(currentTest.nodeContext.keyTerms, "Key Terms")}
-                             </CardContent>
-                           </Card>
-                        )}
-                        <Label htmlFor={`test-input-${test.id}`} className="font-semibold text-md text-glow-gold block mb-1">{test.prompt}</Label>
-                        <Textarea
-                          id={`test-input-${test.id}`}
-                          value={currentTestInput}
-                          onChange={(e) => setCurrentTestInput(e.target.value)}
-                          placeholder="Your comprehensive response..."
-                          rows={4}
-                          className="ui-textarea mb-2 text-sm"
-                          disabled={isLoadingEvaluation}
-                        />
-                        <Button onClick={handleTestSubmit} disabled={isLoadingEvaluation || !currentTestInput.trim()} size="sm" variant="secondary">
-                          {isLoadingEvaluation ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : 'Submit Diagnostic Response'}
-                        </Button>
-                      </CardContent>
-                    )}
+            <CardContent className="space-y-spacing-sm">
+              <div className="text-sm space-y-2">
+                <div className="flex justify-between">
+                  <span>Pending tests:</span>
+                  <span className="font-semibold">{diagnosticQueue.filter(t => t.status === 'pending').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Running tests:</span>
+                  <span className="font-semibold">{diagnosticQueue.filter(t => t.status === 'running').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Completed tests:</span>
+                  <span className="font-semibold">{diagnosticQueue.filter(t => t.status === 'completed').length}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Failed tests:</span>
+                  <span className="font-semibold">{diagnosticQueue.filter(t => t.status === 'error').length}</span>
+                </div>
+              </div>
 
-                    {/* Test Result UI */}
-                    {test.status === 'completed' && test.result && (
-                        <CardContent className="p-3 border-t border-border/20">
-                           {test.result.analysisResult && test.result.shameIndexResult ? (
-                             <ThoughtAnalyzerFeedback analysis={test.result.analysisResult} shameIndex={test.result.shameIndexResult} />
-                           ) : (
-                             <Alert variant={test.result.isPass ? "default" : "destructive"} className={`${test.result.isPass ? 'border-primary bg-primary/10' : 'border-destructive bg-destructive/10'}`}>
-                                <Info className={`h-4 w-4 ${test.result.isPass ? 'text-primary' : 'text-destructive'}`} />
-                                <AlertTitle className={`${test.result.isPass ? 'text-glow-gold' : 'text-glow-crimson'}`}>Result (Score: {test.result.score}%)</AlertTitle>
-                                <AlertDescription>{test.result.feedback}</AlertDescription>
-                             </Alert>
-                           )}
-                        </CardContent>
-                    )}
-                     {test.status === 'error' && test.result && (
-                        <CardContent className="p-3 border-t border-border/20">
-                            <Alert variant="destructive">
-                                <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Test Error</AlertTitle>
-                                <AlertDescription>{test.result.feedback || "An unexpected error occurred during this test."}</AlertDescription>
-                            </Alert>
-                        </CardContent>
-                    )}
-                    {/* Next Test Button (appears if this test is the current one AND completed/errored AND there are more pending tests) */}
-                    {currentTest && test.id === currentTest.id && (test.status === 'completed' || test.status === 'error') && diagnosticQueue.some((t, i) => i > currentTestIndex! && t.status === 'pending') && (
-                         <CardFooter className="p-3 border-t border-border/20">
-                            <Button onClick={handleNextTest} variant="outline" size="sm" className="w-full">Next Pending Test <ArrowLeft className="ml-1 rotate-180" size={16}/></Button>
-                         </CardFooter>
-                    )}
-                  </Card>
-                ))}
-              </ScrollArea>
+              <Separator className="my-spacing-sm" />
+              
+              <Button 
+                onClick={handleRunAllTests} 
+                disabled={!diagnosticQueue.some(t => t.status === 'pending') || diagnosticQueue.some(t => t.status === 'running')}
+                variant="default"
+                className="neuro-button w-full"
+              >
+                <Cpu className="mr-spacing-sm" /> Run Next Test
+              </Button>
             </CardContent>
           </Card>
-        </CardContent>
-      </Card>
+        </div>
+
+        <div className="neuro-main-content space-y-spacing-lg">
+          {currentTest ? (
+            <Card className="neuro-card">
+              <CardHeader>
+                <CardTitle className="neuro-text-heading flex items-center gap-spacing-sm">
+                  {getLevelIcon(currentTest.level)}
+                  Active Test: {currentTest.name}
+                </CardTitle>
+                <CardDescription>Target: {currentTest.targetName}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-spacing-md">
+                <div className="p-spacing-md bg-muted/20 rounded-lg border border-border/50">
+                  <h4 className="neuro-text-subheading mb-spacing-sm">Test Prompt:</h4>
+                  <p className="neuro-text-body">{currentTest.prompt}</p>
+                </div>
+
+                {currentTest.nodeContext?.keyTerms && currentTest.nodeContext.keyTerms.length > 0 && (
+                  renderTermsWithDefinitions(currentTest.nodeContext.keyTerms, "Key Terms")
+                )}
+
+                <div className="neuro-input-group">
+                  <Label htmlFor="diagnostic-response" className="neuro-label">Your Response</Label>
+                  <Textarea
+                    id="diagnostic-response"
+                    value={currentTestInput}
+                    onChange={(e) => setCurrentTestInput(e.target.value)}
+                    className="neuro-input min-h-[150px] resize-none"
+                    placeholder="Enter your response to the diagnostic prompt..."
+                    disabled={isLoadingEvaluation || currentTest.status === 'completed'}
+                  />
+                </div>
+
+                {evaluationResult && currentTest.status === 'completed' && (
+                  <Alert variant={evaluationResult.isPass ? "default" : "destructive"} className="mb-spacing-md">
+                    <div className="flex gap-spacing-sm items-start">
+                      {evaluationResult.isPass ? (
+                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
+                      ) : (
+                        <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                      )}
+                      <div>
+                        <AlertTitle className="mb-1 font-semibold">
+                          {evaluationResult.isPass ? "Test Passed" : "Needs Improvement"}
+                        </AlertTitle>
+                        <AlertDescription className="neuro-text-small">
+                          {evaluationResult.feedback}
+                        </AlertDescription>
+                      </div>
+                    </div>
+                  </Alert>
+                )}
+
+                <div className="flex justify-between">
+                  <Button 
+                    onClick={() => { setCurrentTestIndex(null); clearEvaluationResult(); }}
+                    variant="outline"
+                    className="neuro-button"
+                  >
+                    Cancel Test
+                  </Button>
+                  
+                  {currentTest.status === 'running' && (
+                    <Button 
+                      onClick={handleTestSubmit}
+                      disabled={!currentTestInput.trim() || isLoadingEvaluation}
+                      className="neuro-button"
+                    >
+                      {isLoadingEvaluation ? (
+                        <>
+                          <Loader2 className="mr-spacing-sm h-4 w-4 animate-spin" /> Evaluating...
+                        </>
+                      ) : (
+                        <>
+                          <PackageSearch className="mr-spacing-sm" /> Submit for Evaluation
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
+                  {currentTest.status === 'completed' && (
+                    <Button 
+                      onClick={handleNextTest} 
+                      className="neuro-button"
+                    >
+                      <PlayCircle className="mr-spacing-sm" /> Next Test
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="neuro-card">
+              <CardHeader>
+                <CardTitle className="neuro-text-heading">Diagnostic Results</CardTitle>
+                <CardDescription>Overview of completed tests</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {diagnosticQueue.length === 0 ? (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>No diagnostics in queue</AlertTitle>
+                    <AlertDescription>
+                      Create a new diagnostic test using the panel on the left.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <ScrollArea className="h-[500px] pr-spacing-sm">
+                    <div className="space-y-spacing-md">
+                      {diagnosticQueue.map((test, index) => (
+                        <Card key={test.id} className={`neuro-card-hover ${test.status === 'completed' && test.result?.isPass ? 'border-green-500/50' : test.status === 'error' ? 'border-destructive/50' : ''}`}>
+                          <CardHeader className="p-spacing-sm pb-0">
+                            <div className="flex justify-between">
+                              <CardTitle className="neuro-text-subheading flex items-center gap-spacing-sm">
+                                {getLevelIcon(test.level)}
+                                {test.name}
+                              </CardTitle>
+                              <Badge variant={
+                                test.status === 'pending' ? 'outline' : 
+                                test.status === 'running' ? 'secondary' :
+                                (test.status === 'completed' && test.result?.isPass) ? 'default' : 
+                                'destructive'
+                              }>
+                                {test.status === 'pending' ? 'Pending' : 
+                                 test.status === 'running' ? 'Running' :
+                                 (test.status === 'completed' && test.result?.isPass) ? 'Passed' : 
+                                 'Failed'}
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-spacing-sm">
+                            <p className="neuro-text-small mb-spacing-xs">Target: {test.targetName}</p>
+                            {test.status === 'completed' && test.result && (
+                              <div className="mt-spacing-xs">
+                                <Progress value={test.result.isPass ? 100 : (test.result.score || 0) * 100} className="h-2 mb-spacing-xs" />
+                                <p className="neuro-text-small text-muted-foreground">{test.result.feedback}</p>
+                              </div>
+                            )}
+                          </CardContent>
+                          <CardFooter className="p-spacing-sm pt-0 justify-end">
+                            {test.status === 'pending' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => { 
+                                  setCurrentTestIndex(index); 
+                                  setCurrentTestInput(test.userInput || '');
+                                  setDiagnosticQueue(prev => prev.map((t, i) => i === index ? {...t, status: 'running'} : t));
+                                  clearEvaluationResult();
+                                }}
+                                className="neuro-button text-xs h-8"
+                              >
+                                <PlayCircle className="mr-spacing-xs h-4 w-4" /> Run
+                              </Button>
+                            )}
+                            {test.status === 'completed' && (
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                onClick={() => { 
+                                  setCurrentTestIndex(index); 
+                                  setCurrentTestInput(test.userInput || '');
+                                  clearEvaluationResult();
+                                }}
+                                className="neuro-button text-xs h-8"
+                              >
+                                <FileText className="mr-spacing-xs h-4 w-4" /> View
+                              </Button>
+                            )}
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

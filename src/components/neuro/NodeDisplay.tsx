@@ -198,427 +198,577 @@ export function NodeDisplay({
    const handleRecallSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (isLoadingEvaluation) return;
+        setVoiceTranscriptTarget(setRecallInput);
         onSubmitRecall(recallInput);
-    };
+   };
 
    const handleEpicSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (isLoadingEvaluation) return;
+        if (!showEPIC || isLoadingEvaluation) return;
+        setVoiceTranscriptTarget(setEpicInput);
         onSubmitEpic(epicInput);
-    };
-  
+   };
+
   const handleVoiceInputToggle = async (targetSetter: React.Dispatch<React.SetStateAction<string>>) => {
-    if (!startRecording || !stopRecording || !setVoiceTranscriptTarget) {
-        toast({ description: "Voice input system not available.", variant: "destructive" });
-        return;
-    }
-    setVoiceTranscriptTarget(() => targetSetter); 
-    if (isListening) {
-      const transcript = await stopRecording();
-      if (transcript && typeof transcript === 'string') { 
-        targetSetter(prev => prev + (prev ? " " : "") + transcript); 
+      if (isVoiceModeActive) {
+          try {
+              setVoiceTranscriptTarget(targetSetter);
+              if (isListening) {
+                  const transcript = await stopRecording();
+                  if (transcript) {
+                      targetSetter(prev => prev + ' ' + transcript);
+                  }
+              } else {
+                  startRecording();
+              }
+          } catch (error) {
+              console.error("Error with voice recording:", error);
+              toast({ variant: "destructive", description: "Failed to process voice input." });
+          }
       }
-    } else {
-      targetSetter(''); 
-      startRecording();
-    }
   };
 
   const handleReviseAnswer = () => {
-    clearEvaluationResultCallback();
-    if (phase === 'download') {
-        setHideContentForRecall(true); 
-    }
-    toast({ description: "Revise your answer and resubmit.", className: "bg-card border-secondary text-foreground" });
-  }
+      clearEvaluationResultCallback();
+      if (phase === 'download') {
+          setHideContentForRecall(false);
+      }
+  };
 
   const renderEvaluationFeedbackPanel = () => {
-      if (!evaluationResult || isLoadingEvaluation) return null;
-      
+      if (!evaluationResult) return null;
+
+      const isPassed = evaluationResult.isPass;
       return (
-        <ThoughtAnalyzerPanel
-          userInput={phase === 'download' ? recallInput : epicInput}
-          evaluationResult={evaluationResult}
-          judgingCharacterId={activeModule?.defaultCompanion || "neuros"}
-          onResubmit={!evaluationResult.isPass ? handleReviseAnswer : undefined}
-        />
+          <div className={cn("p-spacing-md mb-spacing-md border rounded-lg", isPassed ? "bg-green-500/10 border-green-500/40" : "bg-amber-500/10 border-amber-500/40", "neuro-fade-in")}>
+              <div className="flex items-center gap-spacing-sm mb-spacing-sm">
+                  {isPassed ? <CheckCircle className="text-green-500" size={20} /> : <AlertTriangle className="text-amber-500" size={20} />}
+                  <h4 className="font-semibold">{isPassed ? "Understanding Verified" : "Needs Refinement"}</h4>
+              </div>
+              <p className="text-sm mb-spacing-md opacity-90">{evaluationResult.feedback}</p>
+              <div className="flex flex-wrap gap-spacing-sm">
+                  {!isPassed && (
+                      <Button variant="outline" size="sm" onClick={handleReviseAnswer} className="text-xs h-8 neuro-button">
+                          <Edit3 size={14} className="mr-spacing-xs" /> Revise Answer
+                      </Button>
+                  )}
+                  {isPassed && (
+                      <Button variant="outline" size="sm" onClick={onProceedAfterSuccess} className="text-xs h-8 neuro-button">
+                          <ArrowRight size={14} className="mr-spacing-xs" /> Continue
+                      </Button>
+                  )}
+              </div>
+          </div>
       );
   };
 
-   const renderTermsWithDefinitions = (terms: string[], title: string, termType: 'keyTerm' | 'moduleTag' = 'keyTerm') => {
-    if (!terms || terms.length === 0) return <p className="text-xs text-muted-foreground italic">No {title.toLowerCase()} specified.</p>;
-    return (
-        <div className="py-spacing-md px-spacing-md"> 
-            <h4 className="font-semibold text-xl mb-spacing-sm text-glow-cyan flex items-center gap-2"><FileTextIcon size={20}/>{title}</h4>
-            <TooltipProvider delayDuration={100}>
-                 <Accordion type="single" collapsible className="w-full md:hidden space-y-spacing-xs">
-                    {terms.map(term => {
-                        const definition = getDefinition(term);
-                        if (!definition) return (
-                            <Badge key={`${term}-badge-mobile-${node.id}-${termType}`} variant="secondary" className="mr-spacing-xs mb-spacing-xs cursor-default bg-muted/70 text-muted-foreground text-sm px-spacing-xs py-0.5">{term}</Badge>
-                        );
-                        return (
-                            <AccordionItem value={term} key={`${term}-accordion-${node.id}-${termType}`} className="border-b-0 mb-spacing-xs">
-                                <AccordionTrigger className="text-sm px-spacing-sm py-2 bg-muted/30 hover:bg-muted/50 text-muted-foreground hover:text-foreground transition-colors rounded-md w-full justify-start hover:no-underline">
-                                   {term.charAt(0).toUpperCase() + term.slice(1)}
-                                </AccordionTrigger>
-                                <AccordionContent className="p-spacing-sm mt-spacing-xs bg-popover text-popover-foreground border border-border rounded-md text-sm leading-relaxed">
-                                    <p className={`font-semibold ${alignmentPropsForModule?.titleColor || 'text-foreground'} mb-spacing-xs text-base`}>{term.charAt(0).toUpperCase() + term.slice(1)}</p>
-                                    <p>{definition}</p>
-                                </AccordionContent>
-                            </AccordionItem>
-                        );
-                    })}
-                 </Accordion>
-                <div className="hidden md:flex flex-wrap gap-spacing-sm mt-spacing-xs">  
-                    {terms.map(term => { 
-                        const definition = getDefinition(term);
-                        return (
-                            <Tooltip key={`${term}-tooltip-desktop-${node.id}-${termType}`}>
-                                <TooltipTrigger asChild>
-                                     <Badge
-                                        variant="outline"
-                                        className={cn(
-                                            `cursor-default bg-muted/50 border-border/50 text-muted-foreground hover:bg-muted/70 hover:text-foreground transition-colors text-base px-spacing-sm py-1 mb-spacing-xs`,
-                                            activeTermDefinition?.term === term && activeTermDefinition?.type === termType && 'bg-muted/70 text-foreground ring-1 ring-accent'
-                                            )}
-                                        onClick={() => !isMobile && definition && setActiveTermDefinition({term, definition, type: termType})}
-                                    >
-                                        {term.charAt(0).toUpperCase() + term.slice(1)}
-                                    </Badge>
-                                </TooltipTrigger>
-                                {!isMobile && definition && (
-                                    <TooltipContent side="top" className="max-w-md text-base ui-tooltip-content p-spacing-sm rounded-md"> 
-                                        <p className={`font-semibold ${alignmentPropsForModule?.titleColor || 'text-foreground'} mb-spacing-xs text-lg`}>{term.charAt(0).toUpperCase() + term.slice(1)}</p>
-                                        <p className="text-sm leading-relaxed">{definition}</p>
-                                    </TooltipContent>
-                                )}
-                            </Tooltip>
-                        );
-                    })}
-                </div>
-            </TooltipProvider>
-            {isMobile && activeTermDefinition?.type === termType && activeTermDefinition?.definition && (
-                <Card className="mt-spacing-md p-spacing-md bg-muted/50 border border-border/30 rounded-md text-sm text-foreground/90" data-no-hover="true"> 
-                    <CardTitle className={`font-semibold text-base ${alignmentPropsForModule?.titleColor || 'text-foreground'} mb-spacing-xs`}>{activeTermDefinition.term.charAt(0).toUpperCase() + activeTermDefinition.term.slice(1)}</CardTitle>
-                    <CardContent className="p-0"><p>{activeTermDefinition.definition}</p></CardContent>
-                </Card>
-            )}
-        </div>
-    );
+  const renderTermsWithDefinitions = (terms: string[], title: string, termType: 'keyTerm' | 'moduleTag' = 'keyTerm') => {
+      if (!terms || terms.length === 0) return null;
+      
+      return (
+          <div className="mb-spacing-lg">
+              <h4 className="text-sm font-semibold mb-spacing-xs">{title}</h4>
+              <div className="flex flex-wrap gap-spacing-xs">
+                  {terms.map(term => {
+                      const definition = termType === 'keyTerm' 
+                          ? getDefinition(term) 
+                          : `Module tag: ${term}`; // Simplified for module tags, expand as needed
+                      
+                      const isActive = activeTermDefinition?.term === term && activeTermDefinition?.type === termType;
+                      
+                      return (
+                          <Badge 
+                              key={term} 
+                              variant={isActive ? "outline" : "secondary"}
+                              className={cn(
+                                  "cursor-pointer text-xs px-spacing-xs py-[1px] transition-colors", 
+                                  isActive ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                              )}
+                              onClick={() => definition && setActiveTermDefinition(isActive ? null : { term, definition, type: termType })}
+                          >
+                              {term}
+                          </Badge>
+                      );
+                  })}
+              </div>
+              {activeTermDefinition && (
+                  <div className="mt-spacing-sm p-spacing-sm text-xs bg-muted/30 rounded-md">
+                      <p className="font-semibold">{activeTermDefinition.term}</p>
+                      <p>{activeTermDefinition.definition}</p>
+                  </div>
+              )}
+          </div>
+      );
   };
 
   const renderDownloadPhase = () => {
-    if (!activeModule || !currentDomainDetails || !node) {
-        return <div className="p-spacing-lg text-muted-foreground text-center">Loading module, domain, or node details...</div>;
-    }
+    const renderContent = () => (
+      <div className="space-y-spacing-md neuro-fade-in">
+        <div>
+          <h2 className="neuro-text-heading text-neutral-accent-color font-theme-neutral mb-spacing-xs">{node.title}</h2>
+          {!hideContentForRecall && <p className="neuro-text-body text-sm opacity-90 mb-spacing-md">{node.shortDefinition}</p>}
 
-    return (
-        <div 
-            className={cn(
-                "lg:grid lg:grid-cols-12 gap-spacing-md p-spacing-md min-h-[calc(100vh-var(--navbar-height,64px)-var(--progressbar-height,160px))]",
-                alignmentPropsForModule.borderColorClass, 
-                "border-t-4"
-            )} 
-            data-alignment={activeModule.alignmentBias || 'neutral'}
-        >
-            {/* Left Sidebar */}
-            <div className="lg:col-span-3 space-y-spacing-md h-full overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent hidden lg:block bg-card rounded-lg shadow-md p-4">
-                 <SidebarPanelLeft
-                    module={activeModule as NeuroModule}
-                    currentDomain={currentDomainDetails}
-                    currentNode={node}
-                    onNavigate={() => {}} 
-                    alignmentProps={alignmentPropsForModule}
-                />
-            </div>
+          {!hideContentForRecall && (
+            <>
+              <div className="space-y-spacing-lg">
+                <section className="neuro-section"> 
+                  <h3 className={cn("neuro-section-title text-neutral-primary-color")}>Detailed Clarification</h3> 
+                  <div className="neuro-text-body p-spacing-sm bg-card/50 rounded-md border border-border/20 shadow-sm">{node.download.clarification}</div> 
+                </section>
 
-            {/* Center Content Panel */}
-            <div className="lg:col-span-6 h-full flex flex-col bg-card rounded-lg shadow-md p-4">
-                <ScrollArea className="flex-grow pr-spacing-sm">
-                    <div className="space-y-spacing-lg">
-                        <Card className="bg-card/80" data-no-hover="true">
-                            <CardHeader className="p-spacing-md">
-                                <CardTitle className={cn("text-3xl flex items-center gap-spacing-sm", alignmentPropsForModule.titleColor, alignmentPropsForModule.fontClass)}>
-                                    <Download size={28} className={alignmentPropsForModule.titleColor.replace('text-glow-','')} /> {node.title}
-                                </CardTitle>
-                                <CardDescription className="text-base text-muted-foreground/80 pt-spacing-xs leading-relaxed">{node.shortDefinition}</CardDescription>
-                            </CardHeader>
-                        </Card>
-                         {/* Main download content - conditionally rendered */}
-                        {!(hideContentForRecall && (!evaluationResult || !evaluationResult.isPass)) && (
-                            <Card className="space-y-spacing-lg" data-no-hover="true">
-                                <CardContent className="p-spacing-md space-y-spacing-md">
-                                    {renderTermsWithDefinitions(moduleTags, "Module Tags", "moduleTag")}
-                                    {moduleTags.length > 0 && <Separator className="my-spacing-md bg-border/30"/>}
-                                    {renderTermsWithDefinitions(node.keyTerms, "Node Key Terms", "keyTerm")}
-                                    <Separator className="my-spacing-md bg-border/30"/>
-                                    <div className="space-y-spacing-xs">
-                                        <h4 className="font-semibold text-xl mb-spacing-sm text-glow-cyan flex items-center gap-2"><MessageSquare size={20}/>Clarification</h4>
-                                        <p className="text-foreground/90 leading-relaxed whitespace-pre-line text-base p-spacing-md bg-background/30 rounded-md border border-border/20 shadow-sm">{node.download.clarification}</p>
-                                    </div>
-                                    <Separator className="my-spacing-md bg-border/30"/>
-                                    <div className="space-y-spacing-xs">
-                                        <h4 className="font-semibold text-xl mb-spacing-sm text-glow-cyan flex items-center gap-2"><HelpCircle size={20}/>Example</h4>
-                                        <p className="italic text-muted-foreground bg-muted/20 p-spacing-md rounded-md border border-border/20 whitespace-pre-line text-base leading-relaxed">{node.download.example}</p>
-                                    </div>
-                                    <Separator className="my-spacing-md bg-border/30"/>
-                                    <div className="space-y-spacing-xs">
-                                        <h4 className="font-semibold text-xl mb-spacing-sm text-glow-cyan flex items-center gap-2"><ExternalLink size={20}/>Real-World Scenario</h4>
-                                        <p className="text-foreground/90 leading-relaxed whitespace-pre-line text-base p-spacing-md bg-background/30 rounded-md border border-border/20 shadow-sm">{node.download.scenario}</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-                         {/* Button to trigger recall - moved after content */}
-                        {phase === 'download' && !isNodeFamiliar && showAttentionCheck && !showRecall && (!evaluationResult || !evaluationResult.isPass) && (
-                            <Button onClick={handleAttentionCheckComplete} size="sm" variant="secondary" className="btn-neural text-sm mt-spacing-md">
-                                <EyeOff size={16} className="mr-1.5" /> Hide Content &amp; Start Recall
-                            </Button>
-                        )}
-                        
-                        <Separator className={cn("my-spacing-lg bg-border/50", (hideContentForRecall && !evaluationResult?.isPass) ? 'mt-spacing-xs' : '')} />
+                <section className="neuro-section"> 
+                  <h3 className={cn("neuro-section-title text-neutral-primary-color")}>Example</h3> 
+                  <p className="italic text-muted-foreground bg-muted/20 p-spacing-sm rounded-md border border-border/20 neuro-text-body">{node.download.example}</p>  
+                </section>
 
-                        {phase === 'download' && showRecall && (!evaluationResult || !evaluationResult.isPass) && !isNodeFamiliar && (
-                            <Card className="bg-primary/5 border border-primary/20 shadow-cyan-md" data-no-hover="true">
-                            <CardHeader className="p-spacing-md">
-                                <Label htmlFor="recall-input" className="font-semibold text-2xl text-glow-gold flex items-center gap-spacing-sm"><Search size={24} /> Recall Challenge</Label>
-                                <CardDescription className="text-base text-muted-foreground/80 mt-spacing-xs leading-relaxed">{node.download.recallPrompt}</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-spacing-md">
-                                <form onSubmit={handleRecallSubmit} className="space-y-spacing-md">
-                                <div className="flex gap-spacing-sm items-end">
-                                    <Textarea
-                                        id="recall-input"
-                                        value={recallInput}
-                                        onChange={(e) => { setRecallInput(e.target.value); if(evaluationResult) clearEvaluationResultCallback(); }}
-                                        placeholder="Explain the core concepts in your own words..."
-                                        rows={6}
-                                        required
-                                        className="ui-textarea text-base flex-grow"
-                                        disabled={isLoadingEvaluation || (isVoiceModeActive && isListening)}
-                                    />
-                                    {isVoiceModeActive && (
-                                        <Button type="button" variant={isListening ? "destructive" : "secondary"} size="lg" className="p-3" onClick={() => handleVoiceInputToggle(setRecallInput)} disabled={isLoadingEvaluation || isLoadingSTT} title={isListening ? "Stop Recording" : "Record Answer"}>
-                                            {isLoadingSTT ? <Loader2 className="animate-spin h-5 w-5" /> : (isListening ? <MicOff className="h-5 w-5"/> : <Mic className="h-5 w-5"/>)}
-                                        </Button>
-                                    )}
-                                </div>
-                                <Button type="submit" size="lg" variant="primary" className="btn-neural-primary text-base px-6 py-3" disabled={isLoadingEvaluation || recallInput.trim().length < 5 || isListening}>
-                                    {isLoadingEvaluation ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Evaluating...</> : 'Submit Recall'}
-                                </Button>
-                                </form>
-                            </CardContent>
-                            </Card>
-                        )}
-                        
-                        {renderEvaluationFeedbackPanel()}
-
-                        {evaluationResult && evaluationResult.isPass && phase === 'download' && (
-                            <Button onClick={() => { onProceedAfterSuccess(); setHideContentForRecall(false); setShowRecall(false); }} size="lg" variant="primary" className="btn-neural-primary text-base px-6 py-3 mt-spacing-md">
-                                Proceed to Next Node <ArrowRight className="ml-2 h-5 w-5"/>
-                            </Button>
-                        )}
-                        {evaluationResult && !evaluationResult.isPass && (phase === 'download' && showRecall) && (
-                            <Button onClick={handleReviseAnswer} variant="outline" size="lg" className="text-base px-6 py-3 mt-spacing-md border-accent text-accent hover:bg-accent/10">
-                                <Edit3 size={18} className="mr-1.5" /> Revise Answer
-                            </Button>
-                        )}
-
-                        {(isNodeFamiliar && phase === 'download' && !showRecall && !showAttentionCheck && !evaluationResult) && (
-                            <CardFooter className="p-spacing-md bg-primary/10 border-t border-primary/30 rounded-b-lg mt-auto">
-                                <p className="text-base text-primary flex items-center gap-1.5 text-glow-gold"><CheckCircle size={18} /> Download complete (Recall successful).</p>
-                            </CardFooter>
-                        )}
-
-                        {activeModule && currentDomainDetails && node && generateNodeDialogue && (
-                            <div className="mt-auto pt-spacing-lg flex-shrink-0 min-h-[300px] max-h-[50vh] flex flex-col">
-                            <MultiPersonaChatPanel
-                                currentNode={node}
-                                module={activeModule as NeuroModule}
-                                currentDomain={currentDomainDetails}
-                                allAiCharacters={allAiCharacters}
-                                guideCharacter={guideCharacter}
-                                generateNodeDialogue={generateNodeDialogue}
-                                isLoadingDialogue={isLoadingDialogue}
-                            />
-                            </div>
-                        )}
+                <section className="neuro-section">  
+                  <h3 className={cn("neuro-section-title text-neutral-primary-color")}>Real-World Scenario</h3> 
+                  <div className="neuro-text-body p-spacing-sm bg-card/50 rounded-md border border-border/20 shadow-sm">{node.download.scenario}</div>  
+                </section>
+                
+                {node.content && (
+                  <section className="neuro-section">
+                    <h3 className={cn("neuro-section-title text-neutral-primary-color")}>Additional Content</h3>
+                    <div className="prose prose-invert max-w-none prose-sm prose-headings:font-semibold prose-headings:mt-spacing-md prose-headings:mb-spacing-xs prose-p:my-spacing-sm prose-li:my-0.5">
+                      <div dangerouslySetInnerHTML={{ __html: node.content }} />
                     </div>
-                </ScrollArea>
-            </div>
-
-            {/* Right Sidebar */}
-             <div className="lg:col-span-3 space-y-spacing-md h-full overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent hidden lg:block bg-card rounded-lg shadow-md p-4">
-                <SidebarPanelRight
-                    keyTerms={node.keyTerms}
-                    moduleTags={activeModule.tags || []}
-                    alignmentProps={alignmentPropsForModule}
-                    currentNodeTitle={node.title}
-                    currentDomainTitle={currentDomainDetails.title}
-                    moduleTitle={activeModule.title}
-                />
-            </div>
+                  </section>
+                )}
+              </div>
+              
+              {showAttentionCheck && !evaluationResult && (
+                <Card className="mt-spacing-xl neuro-card neuro-card-hover">
+                  <CardHeader className="pb-spacing-sm">
+                    <CardTitle className="text-md flex items-center text-primary font-medium">
+                      <Info size={18} className="mr-spacing-sm text-primary" />
+                      Attention Check
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="mb-spacing-md">You've been introduced to this concept. Are you ready to test your understanding?</p>
+                    <Button 
+                      onClick={handleAttentionCheckComplete} 
+                      variant="default" 
+                      className="neuro-button"
+                    >
+                      <Check size={16} className="mr-spacing-xs" /> I've Read This
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+          
+          {showRecall && (
+            <Card className="mt-spacing-xl neuro-card border-secondary/30">
+              <CardHeader className="pb-spacing-xs">
+                <CardTitle className="text-md flex items-center">
+                  <BrainCircuit size={18} className="mr-spacing-sm text-secondary" />
+                  Knowledge Recall
+                </CardTitle>
+                <CardDescription>
+                  Explain the concept in your own words
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleRecallSubmit} className="space-y-spacing-md">
+                  {hideContentForRecall && !evaluationResult && (
+                    <div className="mb-spacing-md border border-secondary/20 rounded-md p-spacing-sm flex items-center justify-between">
+                      <p className="text-sm opacity-80">Content is hidden to test recall. Use your memory to answer.</p>
+                    </div>
+                  )}
+                  
+                  <div className="neuro-input-group">
+                    <Label htmlFor="recall-input" className="neuro-label sr-only">Your explanation</Label>
+                    <div className="relative">
+                      <Textarea
+                        id="recall-input"
+                        value={recallInput}
+                        onChange={(e) => setRecallInput(e.target.value)}
+                        placeholder="Explain this concept in your own words..."
+                        className="neuro-input min-h-[150px] resize-none pr-spacing-lg"
+                        disabled={isLoadingEvaluation}
+                      />
+                      
+                      {isVoiceModeActive && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-2 h-8 w-8 p-0"
+                          onClick={() => handleVoiceInputToggle(setRecallInput)}
+                          disabled={isLoadingEvaluation || isLoadingSTT}
+                        >
+                          {isListening ? (
+                            <Mic className="h-4 w-4 text-destructive animate-pulse" />
+                          ) : (
+                            <MicOff className="h-4 w-4 opacity-70" />
+                          )}
+                          <span className="sr-only">Toggle voice input</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setShowRecall(false);
+                        setHideContentForRecall(false);
+                      }}
+                      className="neuro-button"
+                      disabled={isLoadingEvaluation}
+                    >
+                      Back to Content
+                    </Button>
+                    
+                    <Button 
+                      type="submit" 
+                      disabled={!recallInput || recallInput.trim() === '' || isLoadingEvaluation}
+                      className="neuro-button"
+                    >
+                      {isLoadingEvaluation ? (
+                        <>
+                          <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> Evaluating...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-spacing-xs h-4 w-4" /> Submit Explanation
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </form>
+                
+                {evaluationResult && renderEvaluationFeedbackPanel()}
+              </CardContent>
+            </Card>
+          )}
         </div>
+      </div>
     );
+
+    return renderContent();
   };
 
- const renderInstallPhase = () => {
-    if (!activeModule || !node || !currentDomainDetails) { 
-        return <div className="p-spacing-lg text-muted-foreground text-center">Loading install phase details...</div>;
-    }
-     let promptText = ''; 
-     let icon = <Lightbulb size={20} />; 
-     
-     const currentAlignmentProps = getAlignmentStyling(activeModule?.alignmentBias); 
-     let stepColorClass = currentAlignmentProps.titleColor; 
-     let stepBadgeVariant: "default" | "secondary" | "destructive" | "outline" | "law" | "chaos" | "neutralProgress" = currentAlignmentProps.dataAlignment as any; 
-     let stepBadgeBgClass = cn("bg-opacity-20 border-opacity-50", currentAlignmentProps.borderColorClass, stepColorClass.replace('text-glow-','text-'));
-
-
-     switch(currentEpicStep) {
-         case 'explain': 
-            promptText = node.epic.explainPrompt; 
-            icon = <Lightbulb size={24} className={currentAlignmentProps.titleColor.replace('text-glow-','')}/>; 
-            break;
-         case 'probe': 
-            promptText = node.epic.probePrompt; 
-            icon = <Search size={24} className="text-destructive" />; 
-            stepColorClass = "text-glow-crimson"; 
-            stepBadgeVariant="destructive"; 
-            stepBadgeBgClass = "bg-destructive/20 text-destructive border-destructive/50";
-            break;
-         case 'implement': 
-            promptText = node.epic.implementPrompt; 
-            icon = <Wrench size={24} className="text-primary" />; 
-            stepColorClass = "text-glow-gold"; 
-            stepBadgeVariant="primary"; 
-            stepBadgeBgClass = "bg-primary/20 text-primary border-primary/50";
-            break;
-         case 'connect': 
-            promptText = node.epic.connectPrompt; 
-            icon = <LinkIcon size={24} className="text-secondary" />; 
-            stepColorClass = "text-glow-cyan"; 
-            stepBadgeVariant="secondary"; 
-            stepBadgeBgClass = "bg-secondary/20 text-secondary border-secondary/50";
-            break;
-     }
-
-     const showEpicForm = (currentInteraction === 'reviewing' || (node && !node.understood)) && (!evaluationResult || !evaluationResult.isPass);
-     const nextButtonLabel = currentEpicStep === 'connect' ? 'Complete Node' : `Next Step: ${currentEpicStep === 'explain' ? 'Probe' : currentEpicStep === 'probe' ? 'Implement' : 'Connect'}`;
-     
-     return (
-         <Card data-alignment={currentAlignmentProps.dataAlignment} className="shadow-cyan-lg"> 
-             <CardHeader className="bg-muted/30 p-spacing-lg rounded-t-lg border-b border-border/50"> 
-                 <div className="flex items-center justify-between mb-spacing-sm"> 
-                     <CardTitle className={cn("text-3xl flex items-center gap-spacing-sm", currentAlignmentProps.titleColor, currentAlignmentProps.fontClass)}> 
-                          <BrainCircuit size={28} /> {node.title} 
-                     </CardTitle>
-                     <Badge variant={currentAlignmentProps.dataAlignment as any} className={cn("text-base px-4 py-1.5 bg-opacity-70", currentAlignmentProps.buttonClass)}> 
-                        {currentInteraction === 'reviewing' ? 'Review Session' : 'Install Phase'}
-                     </Badge>
-                 </div>
-                  <div className="flex items-center space-x-spacing-sm mt-spacing-xs"> 
-                     <CardDescription className="text-muted-foreground/80 text-base">EPIC Integration Step:</CardDescription> 
-                      <Badge variant={stepBadgeVariant} className={cn("capitalize text-base px-3 py-1", stepBadgeBgClass)}> 
-                        {React.cloneElement(icon, { className: cn("mr-1.5 h-5 w-5", icon.props.className?.replace(/text-(glow-)?\w+(-\w+)?/g, '')) })}
-                        {currentEpicStep}
-                      </Badge>
-                 </div>
-             </CardHeader>
-             <CardContent className="p-spacing-lg space-y-spacing-lg"> 
-                 <Card data-no-hover="true" className="p-spacing-md bg-muted/20 border border-border/30 rounded-md mb-spacing-lg">
-                    <CardContent className="space-y-spacing-sm p-0">
-                         <h4 className="font-semibold text-lg mb-spacing-xs text-glow-cyan flex items-center gap-2"><FileTextIcon size={20}/>Definition Reminder</h4> 
-                         <p className="text-base text-muted-foreground/80 leading-relaxed">{node.shortDefinition}</p> 
-                         <Separator className="bg-border/30 my-spacing-md"/> 
-                         {renderTermsWithDefinitions(node.keyTerms, "Node Key Terms", "keyTerm")}
-                    </CardContent>
-                </Card>
+  const renderInstallPhase = () => {
+    const epicData = node.epic as NodeEPIC;
+    
+    const renderEpicExplain = () => (
+      <div className="neuro-fade-in space-y-spacing-md">
+        <div className="border-l-4 border-l-neutral-accent-color pl-spacing-md py-spacing-xs">
+          <h4 className="text-neutral-accent-color font-semibold mb-spacing-xs">Explain</h4>
+          <p className="text-sm opacity-90">{epicData.explainPrompt}</p>
+        </div>
+      </div>
+    );
+    
+    const renderEpicProbe = () => (
+      <div className="neuro-fade-in space-y-spacing-md">
+        <div className="border-l-4 border-l-chaos-accent-color pl-spacing-md py-spacing-xs">
+          <h4 className="text-chaos-accent-color font-semibold mb-spacing-xs">Probe</h4>
+          {isLoadingProbe ? (
+            <div className="flex items-center gap-spacing-sm text-sm opacity-80">
+              <Loader2 className="animate-spin h-4 w-4" />
+              <span>Generating thoughtful questions...</span>
+            </div>
+          ) : (
+            <div className="space-y-spacing-sm">
+              {probeQuestions.map((question, i) => (
+                <p key={i} className="text-sm">{question}</p>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+    
+    const renderEpicImplement = () => (
+      <div className="neuro-fade-in space-y-spacing-md">
+        <div className="border-l-4 border-l-law-accent-color pl-spacing-md py-spacing-xs">
+          <h4 className="text-law-accent-color font-semibold mb-spacing-xs">Implement</h4>
+          <p className="text-sm opacity-90">{epicData.implementPrompt}</p>
+        </div>
+      </div>
+    );
+    
+    const renderEpicConnect = () => (
+      <div className="neuro-fade-in space-y-spacing-md">
+        <div className="border-l-4 border-l-primary pl-spacing-md py-spacing-xs">
+          <h4 className="text-primary font-semibold mb-spacing-xs">Connect</h4>
+          <p className="text-sm opacity-90">{epicData.connectPrompt}</p>
+        </div>
+      </div>
+    );
+    
+    const renderActiveEpicStep = () => {
+      switch (currentEpicStep) {
+        case 'explain':
+          return renderEpicExplain();
+        case 'probe':
+          return renderEpicProbe();
+        case 'implement':
+          return renderEpicImplement();
+        case 'connect':
+          return renderEpicConnect();
+        default:
+          return renderEpicExplain();
+      }
+    };
+    
+    return (
+      <div className="space-y-spacing-lg neuro-fade-in">
+        <div>
+          <h2 className="neuro-text-heading text-neutral-accent-color font-theme-neutral mb-spacing-xs">{node.title}</h2>
+          {currentEpicStep !== 'explain' && (
+            <p className="neuro-text-body text-sm opacity-90 mb-spacing-md">{node.shortDefinition}</p>
+          )}
+          
+          <Accordion type="single" collapsible className="w-full">
+            <AccordionItem value="content" className="border-b-0">
+              <AccordionTrigger className="py-spacing-xs text-sm">
+                <span className="flex items-center">
+                  <FileTextIcon size={16} className="mr-spacing-xs opacity-70" />
+                  Node Content
+                </span>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="prose prose-invert max-w-none prose-sm prose-headings:font-semibold prose-headings:mt-spacing-md prose-headings:mb-spacing-xs prose-p:my-spacing-sm prose-li:my-0.5 border-l border-border/50 pl-spacing-md">
+                  {node.content && (
+                    <div dangerouslySetInnerHTML={{ __html: node.content }} />
+                  )}
+                  
+                  {!node.content && (
+                    <>
+                      <h3>Learning Objective</h3>
+                      <p>{node.learningObjective}</p>
+                    </>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          
+          {showEPIC && (
+            <Card className="neuro-card mt-spacing-md">
+              <CardHeader className="pb-spacing-sm">
+                <CardTitle className="text-md flex items-center">
+                  <BrainCircuit size={18} className="mr-spacing-sm text-primary" />
+                  EPIC Learning Framework
+                </CardTitle>
+                <CardDescription>
+                  Complete the steps below to strengthen your understanding
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-spacing-md">
+                {renderActiveEpicStep()}
                 
-                {renderEvaluationFeedbackPanel()}
-
-                 {showEpicForm ? (
-                     <Card data-no-hover="true" className="bg-card/80 shadow-cyan-md p-spacing-lg">
-                       <form onSubmit={handleEpicSubmit} className="space-y-spacing-lg">  
-                           <Label htmlFor="epic-input" className={cn("font-semibold text-2xl flex items-center gap-spacing-sm", stepColorClass)}>{React.cloneElement(icon, {size: 26})} {promptText}</Label> 
-
-                           {currentEpicStep === 'probe' && (
-                               <div className="p-spacing-md bg-muted/40 rounded-md border border-border/20 space-y-spacing-sm"> 
-                                    <h5 className="text-base font-medium text-muted-foreground/90 flex items-center gap-1.5"><HelpCircle size={18} className="text-yellow-400"/>Consider these AI-generated questions:</h5> 
-                                   {isLoadingProbe ? (
-                                        <div className="flex items-center space-x-spacing-sm text-muted-foreground py-spacing-sm"> 
-                                            <Loader2 className="h-5 w-5 animate-spin text-secondary" /> 
-                                            <span className="text-glow-cyan text-base">Generating probing questions...</span> 
-                                        </div>
-                                    ) : probeQuestions.length > 0 ? (
-                                       <ul className="list-disc list-inside text-base space-y-1.5 text-foreground/90 pl-spacing-md py-spacing-xs"> 
-                                           {probeQuestions.map((q, index) => <li key={index}>{q}</li>)}
-                                       </ul>
-                                    ) : (
-                                       <p className="text-base text-destructive text-glow-crimson py-spacing-sm">Could not load probing questions. Proceed with your own.</p> 
-                                    )}
-                               </div>
-                           )}
-                          <div className="flex gap-spacing-sm items-end"> 
-                               <Textarea
-                                   id="epic-input"
-                                   value={epicInput}
-                                   onChange={(e) => { setEpicInput(e.target.value); if(evaluationResult) clearEvaluationResultCallback();}}
-                                   placeholder={`Your response for the ${currentEpicStep} step...`}
-                                   rows={currentEpicStep === 'probe' ? 7 : 5} 
-                                   required
-                                   className="ui-textarea text-base flex-grow" 
-                                   disabled={isLoadingEvaluation || (isLoadingProbe && currentEpicStep === 'probe') || (isVoiceModeActive && isListening)}
-                               />
-                              {isVoiceModeActive && (
-                                  <Button type="button" variant={isListening ? "destructive" : "secondary"} size="lg" className="p-3" onClick={() => handleVoiceInputToggle(setEpicInput)} disabled={isLoadingEvaluation || isLoadingSTT || (isLoadingProbe && currentEpicStep === 'probe')} title={isListening ? "Stop Recording" : "Record Answer"}> 
-                                      {isLoadingSTT ? <Loader2 className="animate-spin h-5 w-5" /> : (isListening ? <MicOff className="h-5 w-5"/> : <Mic className="h-5 w-5"/>)} 
-                                  </Button>
-                              )}
-                          </div>
-                           <Button type="submit" size="lg" variant={currentAlignmentProps.dataAlignment as any} className={cn(currentAlignmentProps.buttonClass, "text-base px-6 py-3")} 
-                                   disabled={isLoadingEvaluation || (isLoadingProbe && currentEpicStep === 'probe') || epicInput.trim().length < 5 || isListening}>
-                              {isLoadingEvaluation ? <><Loader2 className="mr-2 h-5 w-5 animate-spin" /> Evaluating...</> : 
-                               (currentInteraction === 'reviewing' ? `Submit Review (${currentEpicStep})` :
-                               (currentEpicStep === 'connect' ? 'Complete EPIC &amp; Node' : `Submit ${currentEpicStep.charAt(0).toUpperCase() + currentEpicStep.slice(1)}`))}
-                           </Button>
-                       </form>
-                     </Card>
-                 ) : ( 
-                    (currentInteraction !== 'reviewing' || (evaluationResult && evaluationResult.isPass)) && isNodeUnderstood && (
-                     <div className="p-spacing-lg bg-primary/10 border-t-4 border-primary rounded-md mb-spacing-xl text-center"> 
-                        <CheckCircle className="h-12 w-12 text-primary mx-auto mb-spacing-sm" /> 
-                        <p className="text-xl font-semibold text-glow-gold">EPIC Integration Complete!</p> 
-                        <p className="text-base text-primary-foreground/80 mt-spacing-xs"> 
-                            You have successfully installed this concept.
-                        </p>
+                <form onSubmit={handleEpicSubmit} className="space-y-spacing-md">
+                  <div className="neuro-input-group">
+                    <Label htmlFor="epic-input" className="neuro-label">Your Response</Label>
+                    <div className="relative">
+                      <Textarea
+                        id="epic-input"
+                        value={epicInput}
+                        onChange={(e) => setEpicInput(e.target.value)}
+                        placeholder="Enter your response..."
+                        className="neuro-input min-h-[150px] resize-none pr-spacing-lg"
+                        disabled={isLoadingEvaluation}
+                      />
+                      
+                      {isVoiceModeActive && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-2 top-2 h-8 w-8 p-0"
+                          onClick={() => handleVoiceInputToggle(setEpicInput)}
+                          disabled={isLoadingEvaluation || isLoadingSTT}
+                        >
+                          {isListening ? (
+                            <Mic className="h-4 w-4 text-destructive animate-pulse" />
+                          ) : (
+                            <MicOff className="h-4 w-4 opacity-70" />
+                          )}
+                          <span className="sr-only">Toggle voice input</span>
+                        </Button>
+                      )}
                     </div>
-                    )
-                 )}
-                 {evaluationResult && evaluationResult.isPass && (
-                     <Button onClick={() => {onProceedAfterSuccess(); setEpicInput('');}} size="lg" variant="primary" className="btn-neural-primary text-base px-6 py-3 mt-spacing-md">
-                         {nextButtonLabel} <ArrowRight className="ml-2 h-5 w-5"/>
-                     </Button>
-                 )}
-                 {evaluationResult && !evaluationResult.isPass && showEpicForm && (
-                    <Button onClick={handleReviseAnswer} variant="outline" size="lg" className="text-base px-6 py-3 mt-spacing-md border-accent text-accent hover:bg-accent/10">
-                        <Edit3 size={18} className="mr-1.5" /> Revise Answer
+                  </div>
+                  
+                  <div className="flex items-center justify-end">
+                    <Button 
+                      type="submit" 
+                      disabled={!epicInput.trim() || isLoadingEvaluation}
+                      className="neuro-button"
+                    >
+                      {isLoadingEvaluation ? (
+                        <>
+                          <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> Evaluating...
+                        </>
+                      ) : (
+                        <>
+                          <Check className="mr-spacing-xs h-4 w-4" /> Submit Response
+                        </>
+                      )}
                     </Button>
-                 )}
-             </CardContent>
-              {(isNodeUnderstood && (currentInteraction !== 'reviewing' || (evaluationResult && evaluationResult.isPass))) && ( 
-                 <CardFooter className="p-spacing-md bg-primary/10 border-t border-primary/30 rounded-b-lg"> 
-                     <p className="text-base text-primary flex items-center gap-1.5 text-glow-gold"><CheckCircle size={18} /> Concept marked as understood.</p> 
-                 </CardFooter>
-             )}
-         </Card>
-     );
- };
+                  </div>
+                </form>
+                
+                {evaluationResult && renderEvaluationFeedbackPanel()}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    );
+  };
+  
+  return (
+    <div className="neuro-layout-sidebar gap-spacing-lg">
+      <div className="neuro-sidebar">
+        {phase === 'install' && (
+          <div className="space-y-spacing-md">
+            <Card className="neuro-card shadow-sm" data-alignment="neutral">
+              <CardHeader className="p-spacing-md pb-spacing-xs">
+                <CardTitle className="text-sm font-medium">EPIC Progress</CardTitle>
+              </CardHeader>
+              <CardContent className="p-spacing-md pt-spacing-xs">
+                <div className="space-y-2">
+                  {['explain', 'probe', 'implement', 'connect'].map((step) => (
+                    <div key={step} className="flex items-center">
+                      <div 
+                        className={cn(
+                          "w-2 h-2 rounded-full mr-spacing-sm", 
+                          currentEpicStep === step ? "bg-primary" : "bg-muted"
+                        )} 
+                      />
+                      <span 
+                        className={cn(
+                          "text-xs capitalize", 
+                          currentEpicStep === step ? "font-medium" : "opacity-70"
+                        )}
+                      >
+                        {step}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
 
-  if (phase === 'download' && currentInteraction !== 'reviewing') {
-      return renderDownloadPhase();
-  }
-  return renderInstallPhase();
+            <Card className="neuro-card shadow-sm" data-alignment="neutral">
+              <CardHeader className="p-spacing-md pb-spacing-xs">
+                <CardTitle className="text-sm font-medium">Learning Objective</CardTitle>
+              </CardHeader>
+              <CardContent className="p-spacing-md pt-spacing-xs">
+                <p className="text-xs opacity-90">{node.learningObjective}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+        
+        {phase === 'download' && (
+          <div className="space-y-spacing-md">
+            <Card className="neuro-card shadow-sm" data-alignment="neutral">
+              <CardHeader className="p-spacing-md pb-spacing-xs">
+                <CardTitle className="text-sm font-medium">Learning Objective</CardTitle>
+              </CardHeader>
+              <CardContent className="p-spacing-md pt-spacing-xs">
+                <p className="text-xs opacity-90">{node.learningObjective}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+      </div>
+      
+      <div className="neuro-main-content">
+        {phase === 'download' && renderDownloadPhase()}
+        {phase === 'install' && renderInstallPhase()}
+      </div>
+      
+      {phase === 'download' && node.keyTerms?.length > 0 && (
+        <div className="neuro-sidebar">
+          <div className="space-y-spacing-md">
+            {node.keyTerms && node.keyTerms.length > 0 && (
+              <Card className="neuro-card shadow-sm" data-alignment="neutral">
+                <CardHeader className="p-spacing-md pb-spacing-xs">
+                  <CardTitle className="text-sm font-medium">Key Terms</CardTitle>
+                </CardHeader>
+                <CardContent className="p-spacing-md pt-spacing-xs">
+                  <div className="flex flex-wrap gap-spacing-xs">
+                    {node.keyTerms.map(term => {
+                      const definition = getDefinition(term);
+                      const isActive = activeTermDefinition?.term === term && activeTermDefinition?.type === 'keyTerm';
+                      
+                      if (!definition) return null; // Skip terms without definitions
+                      
+                      return (
+                        <Badge 
+                          key={term} 
+                          variant={isActive ? "outline" : "secondary"}
+                          className={cn(
+                            "cursor-pointer text-xs px-spacing-xs py-[1px] transition-colors", 
+                            isActive ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                          )}
+                          onClick={() => setActiveTermDefinition(isActive ? null : { term, definition, type: 'keyTerm' })}
+                        >
+                          {term}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                  {activeTermDefinition && activeTermDefinition.type === 'keyTerm' && (
+                    <div className="mt-spacing-sm p-spacing-sm text-xs bg-muted/30 rounded-md">
+                      <p className="font-semibold">{activeTermDefinition.term}</p>
+                      <p>{activeTermDefinition.definition}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
+            {moduleTags && moduleTags.length > 0 && (
+              <Card className="neuro-card shadow-sm" data-alignment="neutral">
+                <CardHeader className="p-spacing-md pb-spacing-xs">
+                  <CardTitle className="text-sm font-medium">Module Tags</CardTitle>
+                </CardHeader>
+                <CardContent className="p-spacing-md pt-spacing-xs">
+                  <div className="flex flex-wrap gap-spacing-xs">
+                    {moduleTags.map(tag => {
+                      const isActive = activeTermDefinition?.term === tag && activeTermDefinition?.type === 'moduleTag';
+                      const tagDefinition = `Module tag: ${tag}`;
+                      
+                      return (
+                        <Badge 
+                          key={tag} 
+                          variant={isActive ? "outline" : "secondary"}
+                          className={cn(
+                            "cursor-pointer text-xs px-spacing-xs py-[1px] transition-colors", 
+                            isActive ? "bg-accent text-accent-foreground" : "hover:bg-muted"
+                          )}
+                          onClick={() => setActiveTermDefinition(isActive ? null : { term: tag, definition: tagDefinition, type: 'moduleTag' })}
+                        >
+                          {tag}
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                  {activeTermDefinition && activeTermDefinition.type === 'moduleTag' && (
+                    <div className="mt-spacing-sm p-spacing-sm text-xs bg-muted/30 rounded-md">
+                      <p className="font-semibold">{activeTermDefinition.term}</p>
+                      <p>{activeTermDefinition.definition}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 

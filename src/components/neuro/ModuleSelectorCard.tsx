@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Module, ModuleStatus } from '@/types/neuro';
@@ -43,44 +42,42 @@ export function ModuleSelectorCard({ module, onStartModule, onAddModuleToLibrary
     let actionButton = null;
     
     if (canStartDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass} py-2.5 text-sm hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5" /> Start Download</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5" /> Learn This Module</Button>;
     } else if (canContinueDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass} py-2.5 text-sm hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Download</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Learning</Button>;
     } else if (canStartInstall) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass} py-2.5 text-sm hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5" /> Start Install</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5" /> Start Installing</Button>;
     } else if (canContinueInstall) {
-         actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass} py-2.5 text-sm hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Install</Button>;
+         actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Installing</Button>;
     } else if (module.status === 'new') {
-        actionButton = <Button variant="outline" size="sm" onClick={() => onAddModuleToLibrary(module.id)} className={`w-full border-${alignmentProps.dataAlignment}-border-color text-${alignmentProps.dataAlignment}-primary-color hover:bg-${alignmentProps.dataAlignment}-surface-color py-2.5 text-sm hover:scale-[1.02] hover:shadow-cyan-md`}><PlusCircle className="mr-spacing-sm h-5 w-5" /> Add to Library</Button>;
+        actionButton = <Button variant="outline" onClick={() => onAddModuleToLibrary(module.id)} className={`w-full border-${alignmentProps.dataAlignment}-border-color text-${alignmentProps.dataAlignment}-primary-color hover:bg-${alignmentProps.dataAlignment}-surface-color py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><PlusCircle className="mr-spacing-sm h-5 w-5" /> Add to Library</Button>;
     } else if (module.status === 'installed') {
-        actionButton = <Button variant="default" size="sm" className={`w-full opacity-70 cursor-default ${alignmentProps.buttonClass} bg-opacity-70 py-2.5 text-sm`} disabled><Check className="mr-spacing-sm h-5 w-5" /> Installed</Button>;
+        actionButton = <Button variant="default" className={`w-full opacity-70 cursor-default ${alignmentProps.buttonClass} bg-opacity-70 py-3 text-sm`} disabled><Check className="mr-spacing-sm h-5 w-5" /> Installed</Button>;
     }
 
     return (
       <Card 
         key={module.id} 
-        className="flex flex-col justify-between shadow-cyan-sm hover:scale-[1.02] hover:shadow-cyan-md min-h-[340px] p-4" 
+        className="flex flex-col justify-between shadow-cyan-sm hover:scale-[1.02] hover:shadow-cyan-md min-h-[380px] p-8" 
         data-alignment={alignmentProps.dataAlignment}
+        data-hover="true"
       >
-        <CardHeader className="pb-3 pt-1 px-1">
-           <div className="flex justify-between items-start mb-3"> 
-                <div className="flex items-start gap-2 flex-grow min-w-0"> 
-                    {React.cloneElement(alignmentProps.icon, {className: `flex-shrink-0 mt-1 h-6 w-6 ${alignmentProps.icon.props.className}`})} 
-                    {React.cloneElement(typeIcon, {className: `flex-shrink-0 mt-1 h-6 w-6 ${typeIcon.props.className}`})}
-                    <CardTitle className={`text-xl leading-tight ${alignmentProps.titleColor} ${alignmentProps.fontClass} whitespace-normal`} title={module.title}>
-                        {module.title}
-                    </CardTitle>
+        <CardHeader className="pb-5 pt-1 px-1">
+           <div className="flex justify-between items-center mb-5"> 
+                <div className="flex items-center gap-4 flex-shrink-0"> 
+                    {React.cloneElement(alignmentProps.icon, {className: `flex-shrink-0 h-7 w-7 ${alignmentProps.icon.props.className}`})} 
+                    {React.cloneElement(typeIcon, {className: `flex-shrink-0 h-7 w-7 ${typeIcon.props.className}`})}
                 </div>
-              <div className="flex items-center gap-1 flex-shrink-0"> 
-                <Badge variant={statusProps.badgeVariant} className={`text-sm px-2.5 py-1 ${statusProps.badgeClass}`}>
-                  {statusProps.icon && React.cloneElement(statusProps.icon as React.ReactElement, { className: "mr-1.5 h-5 w-5"})}
+              <div className="flex items-center gap-3 flex-shrink-0"> 
+                <Badge variant={statusProps.badgeVariant} className={`text-sm px-3 py-1 ${statusProps.badgeClass}`}>
+                  {statusProps.icon && React.cloneElement(statusProps.icon as React.ReactElement, { className: "mr-2 h-5 w-5"})}
                   {statusProps.text}
                 </Badge>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-primary" onClick={() => onStartReadingMode(module.id)} aria-label={`Read module: ${module.title}`}>
-                        <BookOpen size={18} />
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => onStartReadingMode(module.id)} aria-label={`Read module: ${module.title}`}>
+                        <BookOpen size={20} />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent className="ui-tooltip-content">
@@ -90,17 +87,22 @@ export function ModuleSelectorCard({ module, onStartModule, onAddModuleToLibrary
                 </TooltipProvider>
               </div>
            </div>
-          <p className="min-h-[4.5rem] overflow-y-auto text-base text-text-secondary-neuro leading-relaxed pr-2 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent line-clamp-3">{module.description}</p>
+
+           <CardTitle className={`text-3xl leading-tight ${alignmentProps.titleColor} ${alignmentProps.fontClass} whitespace-normal mt-2 mb-5 pb-2 border-b border-${alignmentProps.dataAlignment}-border-color/30`} title={module.title}>
+               {module.title}
+           </CardTitle>
+           
+          <p className="min-h-[5.5rem] overflow-y-auto text-base text-text-secondary-neuro leading-relaxed pr-3 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent line-clamp-4">{module.description}</p>
         </CardHeader>
-        <CardContent className="pt-3 pb-3 px-1">
+        <CardContent className="pt-4 pb-5 px-1">
             <TooltipProvider>
-                <div className="flex flex-wrap gap-2 mb-3">
-                    {module.tags?.slice(0, 3).map(tag => {
+                <div className="flex flex-wrap gap-3 mb-5">
+                    {module.tags?.slice(0, 4).map(tag => {
                         const definition = getDefinition(tag);
                         return (
                             <Tooltip key={tag}>
                                 <TooltipTrigger asChild>
-                                    <Badge variant="outline" className={`text-sm bg-muted/70 border-border text-text-tertiary-neuro cursor-default hover:bg-muted hover:text-text-primary-neuro transition-colors px-2.5 py-1`}>{tag}</Badge>
+                                    <Badge variant="outline" className={`text-sm bg-muted/70 border-border text-text-tertiary-neuro cursor-default hover:bg-muted hover:text-text-primary-neuro transition-colors px-3 py-1.5`}>{tag}</Badge>
                                 </TooltipTrigger>
                                 {definition && (
                                     <TooltipContent side="top" className="max-w-xs text-sm ui-tooltip-content p-2 rounded-md">
@@ -113,9 +115,9 @@ export function ModuleSelectorCard({ module, onStartModule, onAddModuleToLibrary
                     })}
                 </div>
             </TooltipProvider>
-             <p className="text-sm text-text-tertiary-neuro">Category: <span className="font-semibold capitalize text-text-secondary-neuro">{Array.isArray(module.moduleCategory) ? module.moduleCategory.join(', ') : module.moduleCategory}</span></p>
+             <p className="text-sm text-text-tertiary-neuro mb-3">Category: <span className="font-semibold capitalize text-text-secondary-neuro">{Array.isArray(module.moduleCategory) ? module.moduleCategory.join(', ') : module.moduleCategory}</span></p>
         </CardContent>
-        <CardFooter className="pt-3 px-1 pb-1">
+        <CardFooter className="pt-4 px-1 pb-1 mt-auto">
           {actionButton}
         </CardFooter>
       </Card>

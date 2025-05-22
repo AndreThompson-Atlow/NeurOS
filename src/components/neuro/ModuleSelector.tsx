@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Module, ModuleStatus, ModuleType } from '@/types/neuro';
@@ -18,8 +17,6 @@ interface ModuleSelectorProps {
   userModules: Record<string, Module>;
   onStartModule: (moduleId: string) => void;
   onAddModuleToLibrary: (moduleId: string) => void;
-  onCreateCustom: (topic: string) => void;
-  isLoadingCustom: boolean;
   onStartReadingMode: (moduleId: string) => void;
 }
 
@@ -35,14 +32,13 @@ const getStatusProps = (status: ModuleStatus | undefined) => {
     }
 }
 
-export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrary, onCreateCustom, isLoadingCustom, onStartReadingMode }: ModuleSelectorProps) {
+export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrary, onStartReadingMode }: ModuleSelectorProps) {
   const [customTopic, setCustomTopic] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
   const handleCustomSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (customTopic.trim() && !isLoadingCustom) {
-      onCreateCustom(customTopic.trim());
+    if (customTopic.trim()) {
       setCustomTopic('');
       setShowCustomInput(false);
     }
@@ -87,7 +83,7 @@ export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrar
     }
 
     return (
-      <Card key={module.id} className="flex flex-col justify-between shadow-cyan-sm hover:shadow-cyan-md min-h-[320px] p-spacing-sm" data-alignment={alignmentProps.dataAlignment}> {/* Increased min-h and added p-spacing-sm */}
+      <Card key={module.id} className="flex flex-col justify-between shadow-cyan-sm hover:shadow-cyan-md min-h-[320px] p-spacing-sm" data-alignment={alignmentProps.dataAlignment} data-hover="true"> {/* Increased min-h and added p-spacing-sm */}
         <CardHeader className="pb-spacing-sm">
            <div className="flex justify-between items-start mb-spacing-sm"> {/* Increased bottom margin */}
                 <div className="flex items-start gap-spacing-sm flex-grow min-w-0"> {/* Increased gap */}
@@ -178,10 +174,9 @@ export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrar
   return (
     <div className="container mx-auto px-spacing-sm md:px-spacing-md py-spacing-md max-w-full"> {/* Increased max-w */}
        <Tabs defaultValue="library" className="w-full">
-         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 mb-spacing-lg ui-tabs-list p-1.5"> {/* Increased mb and p */}
+         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-2 mb-spacing-lg ui-tabs-list p-1.5"> {/* Increased mb and p */}
            <TabsTrigger value="library" className="ui-tabs-trigger py-2.5">My Library</TabsTrigger> {/* Increased py */}
            <TabsTrigger value="explore" className="ui-tabs-trigger py-2.5">Explore Modules</TabsTrigger>
-           <TabsTrigger value="custom" className="ui-tabs-trigger py-2.5">Create Custom</TabsTrigger>
          </TabsList>
 
          <TabsContent value="library" className="space-y-spacing-xl"> {/* Increased space-y */}
@@ -223,53 +218,6 @@ export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrar
              )
             }
         </TabsContent>
-
-         <TabsContent value="custom">
-           <Card className="max-w-lg mx-auto shadow-cyan-md p-spacing-md" data-alignment="law"> {/* Added p-spacing-md */}
-             <CardHeader className="pb-spacing-md"> {/* Increased pb */}
-               <CardTitle className="module-title text-law-primary-color font-theme-law">Create a Custom Module</CardTitle>
-               <CardDescription className="secondary-text">Enter a topic, and NeuroOS will forge a personalized learning module.</CardDescription>
-             </CardHeader>
-             <CardContent>
-               {showCustomInput ? (
-                 <form onSubmit={handleCustomSubmit} className="space-y-spacing-lg"> {/* Increased space-y */}
-                   <div className="space-y-spacing-sm"> {/* Increased space-y */}
-                     <Label htmlFor="custom-topic" className="text-text-secondary-neuro">Learning Topic</Label>
-                     <Input
-                       id="custom-topic"
-                       type="text"
-                       value={customTopic}
-                       onChange={(e) => setCustomTopic(e.target.value)}
-                       placeholder="e.g., Quantum Entanglement, Stoic Philosophy"
-                       required
-                       className="ui-input"
-                       disabled={isLoadingCustom}
-                     />
-                   </div>
-                   <div className="flex gap-spacing-md"> {/* Increased gap */}
-                     <Button type="submit" variant="law" className="flex-1 btn-law" disabled={isLoadingCustom || !customTopic.trim()}>
-                       {isLoadingCustom ? (
-                         <>
-                           <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> Generating...
-                         </>
-                       ) : (
-                         <><Rocket className="mr-spacing-xs"/>Generate Module</>
-                       )}
-                     </Button>
-                     <Button variant="outline" onClick={() => setShowCustomInput(false)} disabled={isLoadingCustom} className="border-law-border-color text-law-primary-color hover:bg-law-surface-color">
-                       Cancel
-                     </Button>
-                   </div>
-                 </form>
-               ) : (
-                 <Button onClick={() => setShowCustomInput(true)} variant="law" className="w-full btn-law" disabled={isLoadingCustom}>
-                  <Rocket className="mr-spacing-xs"/> Enter Topic to Generate
-                 </Button>
-               )}
-               <p className="text-xs text-text-tertiary-neuro mt-spacing-md text-center">Note: AI generation may take a moment. Be specific with your topic for best results.</p> {/* Increased mt */}
-             </CardContent>
-           </Card>
-         </TabsContent>
        </Tabs>
     </div>
   );

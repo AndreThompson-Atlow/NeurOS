@@ -36,14 +36,14 @@ const DUMMY_SIMPLIFIED_RESPONSE: EvaluateResponseOutput = {
     overallFeedback: "AI evaluation (simplified) failed to generate a response. This is a fallback message.",
     isPass: false,
     rubricScores: { 
-        clarity: { score: 0.0, label: "Clarity N/A" },
-        relevance: { score: 0.0, label: "Relevance N/A" },
-        depthOfThought: { score: 0.0, label: "Depth Of Thought N/A" },
-        domainAlignment: { score: 0.0, label: "Domain Alignment N/A" },
-        logicalIntegrity: { score: 0.0, label: "Logical Integrity N/A" },
-        specificity: { score: 0.0, label: "Specificity N/A" },
-        voiceAppropriateness: { score: 0.0, label: "Voice Appropriateness N/A" },
-        originality: { score: 0.0, label: "Originality N/A" }
+        clarity: { score: 0.0, label: "Clarity N/A", feedback: "" },
+        relevance: { score: 0.0, label: "Relevance N/A", feedback: "" },
+        depthOfThought: { score: 0.0, label: "Depth Of Thought N/A", feedback: "" },
+        domainAlignment: { score: 0.0, label: "Domain Alignment N/A", feedback: "" },
+        logicalIntegrity: { score: 0.0, label: "Logical Integrity N/A", feedback: "" },
+        specificity: { score: 0.0, label: "Specificity N/A", feedback: "" },
+        voiceAppropriateness: { score: 0.0, label: "Voice Appropriateness N/A", feedback: "" },
+        originality: { score: 0.0, label: "Originality N/A", feedback: "" }
     },
     qualityFlags: { 
         mimicry: false,
@@ -85,9 +85,22 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
   const requiredDimensions = ['clarity', 'relevance', 'depthOfThought', 'domainAlignment', 'logicalIntegrity', 'specificity', 'voiceAppropriateness', 'originality'] as const;
   let ensuredRubricScores: NeuroRubricScores = {} as NeuroRubricScores; // Initialize to satisfy type
   for (const dim of requiredDimensions) {
-    ensuredRubricScores[dim] = { score: 0.0, label: `${dim.charAt(0).toUpperCase() + dim.slice(1).replace(/([A-Z])/g, ' $1')} N/A` };
+    ensuredRubricScores[dim] = { 
+      score: 0.0, 
+      label: `${dim.charAt(0).toUpperCase() + dim.slice(1).replace(/([A-Z])/g, ' $1')} N/A`, 
+      feedback: '' 
+    };
   }
-  let finalQualityFlags: NeuroQualityFlags = { mimicry: false, insufficientLength: false, lowCoherence: false };
+  let finalQualityFlags: NeuroQualityFlags = { 
+    mimicry: false, 
+    insufficientLength: false, 
+    lowCoherence: false,
+    isComplete: true,
+    isAccurate: true,
+    isRelevant: true,
+    isWellStructured: true,
+    showsUnderstanding: true
+  };
 
   // SIMPLIFIED EVALUATION PATH (when Thought Analyzer is disabled)
   if (input.isThoughtAnalyzerEnabled === false) {
@@ -118,36 +131,55 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       `;
       
       let responseReceived = false;
+      let attemptCount = 0;
+      const MAX_ATTEMPTS = 3;
       
-      try {
-        // Try with the specified character first
-        const llmSimplifiedResponse = await generateWithCharacter({
-            prompt: simplifiedPrompt,
-            characterId: input.judgingCharacterId || 'neuros',
-            config: { temperature: 0.5, maxOutputTokens: 400 },
-        });
-
-        rawSimplifiedText = (llmSimplifiedResponse as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text || null;
-        responseReceived = !!rawSimplifiedText;
-        console.log('[SIMPLIFIED AI RAW STRING OUTPUT - PRE-PARSE]:', rawSimplifiedText);
-      } catch (apiError) {
-        console.error('[SIMPLIFIED AI FIRST ATTEMPT ERROR]:', apiError);
-        
-        // If the first attempt fails, try again with a different character
+      while (attemptCount < MAX_ATTEMPTS && !responseReceived) {
         try {
-          console.log('[evaluateResponseFlow]: Retrying with fallback character...');
-          const fallbackResponse = await generateWithCharacter({
+          // Exponential backoff between retries
+          if (attemptCount > 0) {
+            const backoffMs = Math.pow(2, attemptCount) * 500; // 1s, 2s, 4s
+            console.log(`[SIMPLIFIED AI] Retry attempt ${attemptCount+1} after ${backoffMs}ms backoff`);
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+          }
+          
+          // Try with the specified character first
+          const llmSimplifiedResponse = await generateWithCharacter({
               prompt: simplifiedPrompt,
-              characterId: 'neuros', // Always use neuros as fallback
+              characterId: input.judgingCharacterId || 'neuros',
               config: { temperature: 0.5, maxOutputTokens: 400 },
           });
-          
-          rawSimplifiedText = (fallbackResponse as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text || null;
+  
+          rawSimplifiedText = (llmSimplifiedResponse as any)?.response?.candidates?.[0]?.content?.parts?.[0]?.text || null;
           responseReceived = !!rawSimplifiedText;
-          console.log('[SIMPLIFIED AI FALLBACK OUTPUT]:', rawSimplifiedText);
-        } catch (fallbackError) {
-          console.error('[SIMPLIFIED AI FALLBACK ATTEMPT ERROR]:', fallbackError);
+          console.log('[SIMPLIFIED AI RAW STRING OUTPUT - PRE-PARSE]:', rawSimplifiedText);
+          
+          if (!responseReceived && attemptCount < MAX_ATTEMPTS - 1) {
+            console.log(`[SIMPLIFIED AI] No response on attempt ${attemptCount+1}, will retry`);
+          }
+        } catch (apiError) {
+          console.error(`[SIMPLIFIED AI ATTEMPT ${attemptCount+1} ERROR]:`, apiError);
+          
+          // If it's the last attempt, try a fallback character
+          if (attemptCount === MAX_ATTEMPTS - 1) {
+            try {
+              console.log('[evaluateResponseFlow]: Final retry with fallback character...');
+              const fallbackResponse = await generateWithCharacter({
+                  prompt: simplifiedPrompt,
+                  characterId: 'neuros', // Always use neuros as fallback
+                  config: { temperature: 0.5, maxOutputTokens: 400 },
+              });
+              
+              rawSimplifiedText = (fallbackResponse as any)?.response?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+              responseReceived = !!rawSimplifiedText;
+              console.log('[SIMPLIFIED AI FALLBACK OUTPUT]:', rawSimplifiedText);
+            } catch (fallbackError) {
+              console.error('[SIMPLIFIED AI FALLBACK ATTEMPT ERROR]:', fallbackError);
+            }
+          }
         }
+        
+        attemptCount++;
       }
 
       // Process the AI response if we got one
@@ -201,38 +233,45 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
           // Implement simple heuristic-based evaluation as fallback
           const wordCount = input.userResponse.trim().split(/\s+/).filter(Boolean).length;
           
-          // Check if response has keywords from the question/prompt
-          const keywordsFromDefinition = input.nodeDefinition
+          // Check for similarities between user response and node definition/explanation
+          // This is more reliable than checking against the full node content
+          const similarity = calculateSimilarity(
+            input.userResponse, 
+            `${input.nodeDefinition} ${input.nodeExplanation}`
+          );
+          
+          // Check if response is mimicry vs. original work
+          const isLikelyMimicry = similarity > 0.8 && wordCount > 20;
+          
+          // Get key keywords from the node content
+          const keywordsFromContent = `${input.nodeDefinition} ${input.nodeExplanation}`
             .toLowerCase()
             .split(/\W+/)
             .filter(word => word.length > 3);
           
           // Count matching keywords
-          const matchingKeywords = keywordsFromDefinition.filter(keyword => 
+          const matchingKeywords = keywordsFromContent.filter(keyword => 
             input.userResponse.toLowerCase().includes(keyword)
           );
           
-          // Set score based on word count and keyword matching
-          if (wordCount < 10) {
+          // Enhanced scoring logic based on content matching and understanding
+          if (isLikelyMimicry) {
+            // Penalize for apparent copying but less severely if they've incorporated key concepts
+            simplifiedParsedOutput.overallScore = matchingKeywords.length >= Math.min(4, keywordsFromContent.length) ? 50 : 30;
+            simplifiedParsedOutput.overallFeedback = "Your response appears to closely mirror the source material. Try explaining the concept in your own words.";
+          } else if (wordCount < 10) {
             simplifiedParsedOutput.overallScore = 40;
             simplifiedParsedOutput.overallFeedback = "Your answer is too brief. Please provide a more detailed explanation.";
-          } else if (wordCount >= 50 && matchingKeywords.length >= Math.min(3, keywordsFromDefinition.length)) {
+          } else if (similarity > 0.5 && matchingKeywords.length >= Math.min(3, keywordsFromContent.length)) {
+            // Good understanding shown through appropriate keyword usage
             simplifiedParsedOutput.overallScore = 85;
             simplifiedParsedOutput.overallFeedback = "Your detailed response demonstrates good understanding of the concept.";
-          } else if (wordCount >= 25) {
+          } else if (wordCount >= 25 && matchingKeywords.length >= Math.min(2, keywordsFromContent.length)) {
             simplifiedParsedOutput.overallScore = 70;
             simplifiedParsedOutput.overallFeedback = "Your response covers the basics well. Consider adding more specific details.";
           } else {
             simplifiedParsedOutput.overallScore = 60;
             simplifiedParsedOutput.overallFeedback = "Your response addresses the question but could be more detailed.";
-          }
-          
-          // Check for direct copying from node content
-          if (input.nodeContent && 
-              input.userResponse.length > 50 && 
-              calculateSimilarity(input.userResponse, input.nodeContent) > 0.8) {
-            simplifiedParsedOutput.overallScore = Math.max(30, simplifiedParsedOutput.overallScore - 40);
-            simplifiedParsedOutput.overallFeedback = "Your answer appears to copy directly from the source material. Try explaining in your own words.";
           }
       }
     } catch (e: any) {
@@ -287,7 +326,12 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
     finalQualityFlags = {
         mimicry: false,
         insufficientLength: input.userResponse.trim().split(/\s+/).filter(Boolean).length < 15,
-        lowCoherence: false
+        lowCoherence: false,
+        isComplete: true,
+        isAccurate: true,
+        isRelevant: true,
+        isWellStructured: true,
+        showsUnderstanding: true
     };
     
     // Create feedback outputs
@@ -304,7 +348,11 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
         overallFeedback: overallFeedbackToUse,
         isPass: simplifiedParsedOutput.overallScore >= 70, // Lower threshold for simplified path
         rubricScores: ensuredRubricScores, 
-        qualityFlags: finalQualityFlags,  
+        qualityFlags: {
+            mimicry: Boolean(finalQualityFlags.mimicry),
+            insufficientLength: Boolean(finalQualityFlags.insufficientLength),
+            lowCoherence: Boolean(finalQualityFlags.lowCoherence)
+        },  
         personalityFeedback: personalityFeedbackText,
         analysisResult: undefined, 
         shameIndexResult: undefined,
@@ -394,7 +442,7 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       const aiDimData = llmRawOutput.rubricScores![dim]; 
       const score = (aiDimData && typeof aiDimData.score === 'number') ? Math.max(0, Math.min(1, aiDimData.score)) : 0.0;
       const label = (aiDimData && typeof aiDimData.label === 'string' && aiDimData.label.trim() !== "") ? aiDimData.label.trim() : `${dim.charAt(0).toUpperCase() + dim.slice(1).replace(/([A-Z])/g, ' $1')} N/A`;
-      ensuredRubricScores[dim] = { score, label };
+      ensuredRubricScores[dim] = { score, label, feedback: '' };
   }
   console.log('[DEFAULTED RUBRIC SCORES]:', JSON.stringify(ensuredRubricScores, null, 2));
 

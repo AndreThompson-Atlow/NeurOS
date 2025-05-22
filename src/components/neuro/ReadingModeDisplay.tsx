@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Module, Domain, Node as NeuroNode } from '@/types/neuro'; 
@@ -10,7 +9,7 @@ import { ReadingContentPanel } from './ReadingContentPanel';
 import { SidebarPanelRight } from './SidebarPanelRight';
 import { getAlignmentStyling } from './utils';
 import type { Character } from '@/types/characterTypes'; 
-import type { GenerateReadingDialogueOutput, DialogueTurn as GenkitDialogueTurn } from '@/ai/flows/types/generateReadingDialogueTypes';
+import type { GenerateReadingDialogueOutput } from '@/ai/flows/types/generateReadingDialogueTypes';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter } from '@/components/ui/card';
 // Removed Separator import as it's no longer used here
@@ -25,7 +24,7 @@ interface ReadingModeDisplayProps {
   onExit: () => void;
   onStartModule: (moduleId: string) => void; 
   speakText: (text: string) => Promise<void>;
-  generateNodeDialogue: (node: NeuroNode, module: Module, domain: Domain, personalities: string[], previousDialogue?: GenkitDialogueTurn[]) => Promise<GenerateReadingDialogueOutput>;
+  generateNodeDialogue: (node: NeuroNode, module: Module, domain: Domain, personalities: string[], previousDialogue?: any[]) => Promise<GenerateReadingDialogueOutput>;
   isSpeaking: boolean;
   isLoadingTTS: boolean;
   isLoadingDialogue: boolean; 
@@ -57,9 +56,9 @@ export function ReadingModeDisplay({
 
   if (!module || !currentDomain || !currentNode) {
     return (
-      <div className="container mx-auto p-spacing-lg text-center flex flex-col justify-center items-center min-h-screen">
+      <div className="neuro-container neuro-fade-in flex flex-col justify-center items-center min-h-screen">
         <p className="text-destructive text-xl">Error: Could not load reading content.</p>
-        <Button onClick={onExit} variant="outline" className="mt-spacing-lg btn-neutral">
+        <Button onClick={onExit} variant="outline" className="mt-spacing-lg neuro-button">
           <ArrowLeft className="mr-spacing-sm" /> Back to Library
         </Button>
       </div>
@@ -83,9 +82,9 @@ export function ReadingModeDisplay({
   const startButtonLabel = getStartButtonLabel(module.status);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-spacing-md p-spacing-md min-h-screen bg-background">
+    <div className="neuro-layout-sidebar gap-spacing-md p-spacing-md min-h-screen bg-background neuro-fade-in">
       <div className={cn(
-        "lg:col-span-3 flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-cyan-sm bg-card/95 p-4",  // Added p-4 for internal padding
+        "neuro-sidebar flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-sm neuro-card",
         "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]", 
         alignmentProps.borderColorClass, "border-l-4"
         )}
@@ -101,7 +100,7 @@ export function ReadingModeDisplay({
       </div>
 
       <div className={cn(
-        "lg:col-span-7 min-w-0 flex flex-col overflow-hidden rounded-lg shadow-cyan-md bg-card/95",
+        "neuro-main-content min-w-0 flex flex-col overflow-hidden rounded-lg shadow-md neuro-card",
         "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]" 
         )}
       > 
@@ -125,19 +124,18 @@ export function ReadingModeDisplay({
           generateNodeDialogue={generateNodeDialogue}
           isLoadingDialogue={isLoadingDialogue}
         />
-        {/* Removed Separator from here */}
         <CardFooter className="p-spacing-sm border-t border-divider-neuro mt-auto flex-shrink-0 bg-card">
           <div className="grid grid-cols-2 gap-spacing-sm w-full">
-            <Button variant="outline" size="sm" onClick={() => onNavigate('prev_node')} disabled={currentNodeIndex === 0 && currentDomainIndex === 0} className={cn("text-sm py-spacing-xs", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('prev_node')} disabled={currentNodeIndex === 0 && currentDomainIndex === 0} className={cn("text-sm py-spacing-xs neuro-button", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
               <ArrowLeftCircle className="mr-1.5" /> Prev Node
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('next_node')} disabled={currentNodeIndex >= currentDomain.nodes.length - 1 && currentDomainIndex >= module.domains.length - 1} className={cn("text-sm py-spacing-xs", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('next_node')} disabled={currentNodeIndex >= currentDomain.nodes.length - 1 && currentDomainIndex >= module.domains.length - 1} className={cn("text-sm py-spacing-xs neuro-button", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
               Next Node <ArrowRightCircle className="ml-1.5" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('prev_domain')} disabled={currentDomainIndex === 0} className={cn("text-sm py-spacing-xs", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('prev_domain')} disabled={currentDomainIndex === 0} className={cn("text-sm py-spacing-xs neuro-button", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
               <ArrowUpCircle className="mr-1.5 rotate-[270deg]" /> Prev Domain
             </Button>
-            <Button variant="outline" size="sm" onClick={() => onNavigate('next_domain')} disabled={currentDomainIndex >= module.domains.length - 1} className={cn("text-sm py-spacing-xs", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
+            <Button variant="outline" size="sm" onClick={() => onNavigate('next_domain')} disabled={currentDomainIndex >= module.domains.length - 1} className={cn("text-sm py-spacing-xs neuro-button", alignmentProps.borderColorClass, alignmentProps.titleColor)}>
               Next Domain <ArrowDownCircle className="ml-1.5 rotate-[270deg]" />
             </Button>
           </div>
@@ -145,7 +143,7 @@ export function ReadingModeDisplay({
       </div>
 
        <div className={cn(
-         "lg:col-span-2 flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-cyan-sm bg-card/95 p-4",  // Added p-4 for internal padding
+         "neuro-sidebar flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-sm neuro-card",
          "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]", 
          alignmentProps.borderColorClass, "border-r-4"
          )}

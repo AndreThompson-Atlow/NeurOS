@@ -11,7 +11,7 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80 shadow-cyan-btn", // Mapped to Highlight Neon (Specter Cyan)
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/80 shadow-crimson-btn", // Judgment Crimson
+          "bg-destructive text-white hover:bg-destructive/80 shadow-crimson-btn", // Judgment Crimson with white text
         outline:
           "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground", // General outline
         secondary: 
