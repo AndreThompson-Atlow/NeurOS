@@ -73,8 +73,6 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
     advanceReviewSession, 
     isListening,
     isLoadingSTT,
-    startRecording,
-    stopRecording,
     setVoiceTranscriptTarget,
     isVoiceModeActive,
     updateNodeStatus, 
@@ -87,7 +85,7 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
   const [viewMode, setViewMode] = useState<'upcoming' | 'all' | 'overdue'>('upcoming');
   
   // Get scheduled reviews using our spaced repetition system
-  const scheduledReviews = useGetScheduledReviews(viewMode);
+  const { reviews, totalCount } = useGetScheduledReviews(viewMode);
 
   useEffect(() => {
     setLocalEvaluationResult(evaluationResult);
@@ -139,11 +137,13 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
   };
 
   // This hook implements our spaced repetition system to get scheduled reviews
-  function useGetScheduledReviews(viewMode: string): ScheduledReview[] {
+  function useGetScheduledReviews(viewMode: string): { reviews: ScheduledReview[], totalCount: number } {
     const [reviews, setReviews] = useState<ScheduledReview[]>([]);
+    const [totalReviews, setTotalReviews] = useState<number>(0);
     
     useEffect(() => {
       const allNodes: ScheduledReview[] = [];
+      const allReviewableNodes: ScheduledReview[] = [];
       
       // Calculate memory decay based on time since last review
       const calculateMemoryDecay = (node: NeuroNode): number => {
@@ -215,40 +215,46 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
             nextWeek.setDate(nextWeek.getDate() + 7);
             const isDueThisWeek = reviewDueDate <= nextWeek;
             
+            // Calculate priority score based on multiple factors
+            const hoursOverdue = isDue 
+              ? Math.max(0, (now.getTime() - reviewDueDate.getTime()) / (1000 * 3600)) 
+              : 0;
+            
+            const priorityScore = 
+              (node.status === 'needs_review' ? 200 : 0) +   // Explicitly marked gets highest priority
+              Math.min(hoursOverdue, 200) +                  // More overdue = higher priority (capped)
+              (100 - currentMemoryStrength);                 // Weaker memory = higher priority
+            
+            // Get a weighted EPIC component for better reviews
+            const epicComponent = getWeightedEpicComponent();
+            
+            const reviewNode = {
+              nodeId: node.id,
+              moduleId: module.id,
+              nodeTitle: node.title,
+              moduleTitle: (module as Module).title,
+              memoryStrength: currentMemoryStrength,
+              dueDate: reviewDueDate,
+              epicComponent,
+              isDue,
+              isDueToday,
+              isDueThisWeek,
+              completedToday: false,
+              lastReviewed: node.lastReviewed ? new Date(node.lastReviewed) : null,
+              priorityScore,
+              node: node
+            };
+            
+            // Add to all reviewable nodes (for total count)
+            allReviewableNodes.push(reviewNode);
+            
+            // Add to filtered list based on view mode
             if (
               (viewMode === 'all') ||
               (viewMode === 'upcoming' && isDueThisWeek) ||
               (viewMode === 'overdue' && isDue)
             ) {
-              // Calculate priority score based on multiple factors
-              const hoursOverdue = isDue 
-                ? Math.max(0, (now.getTime() - reviewDueDate.getTime()) / (1000 * 3600)) 
-                : 0;
-              
-              const priorityScore = 
-                (node.status === 'needs_review' ? 200 : 0) +   // Explicitly marked gets highest priority
-                Math.min(hoursOverdue, 200) +                  // More overdue = higher priority (capped)
-                (100 - currentMemoryStrength);                 // Weaker memory = higher priority
-              
-              // Get a weighted EPIC component for better reviews
-              const epicComponent = getWeightedEpicComponent();
-              
-              allNodes.push({
-                nodeId: node.id,
-                moduleId: module.id,
-                nodeTitle: node.title,
-                moduleTitle: (module as Module).title,
-                memoryStrength: currentMemoryStrength,
-                dueDate: reviewDueDate,
-                epicComponent,
-                isDue,
-                isDueToday,
-                isDueThisWeek,
-                completedToday: false,
-                lastReviewed: node.lastReviewed ? new Date(node.lastReviewed) : null,
-                priorityScore,
-                node: node
-              });
+              allNodes.push(reviewNode);
             }
           });
         });
@@ -256,10 +262,14 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
       
       // Sort by priority score
       allNodes.sort((a, b) => b.priorityScore - a.priorityScore);
+      allReviewableNodes.sort((a, b) => b.priorityScore - a.priorityScore);
+      
       setReviews(allNodes);
+      setTotalReviews(allReviewableNodes.length);
     }, [userModules, viewMode]);
     
-    return reviews;
+    // Return both the filtered reviews and total count
+    return { reviews, totalCount: totalReviews };
   }
 
   function ReviewCard({ review }: { review: ScheduledReview }) {
@@ -356,15 +366,15 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                 <div className="grid grid-cols-3 gap-1 mb-spacing-md">
                   <div className="p-2 bg-muted/30 rounded-md border border-border/20 text-center">
                     <div className="text-xs text-muted-foreground">Due Today</div>
-                    <div className="text-lg font-bold text-destructive">{scheduledReviews.filter(r => r.isDueToday).length}</div>
+                    <div className="text-lg font-bold text-destructive">{reviews.filter(r => r.isDueToday).length}</div>
                   </div>
                   <div className="p-2 bg-muted/30 rounded-md border border-border/20 text-center">
                     <div className="text-xs text-muted-foreground">This Week</div>
-                    <div className="text-lg font-bold text-amber-500">{scheduledReviews.filter(r => r.isDueThisWeek).length}</div>
+                    <div className="text-lg font-bold text-amber-500">{reviews.filter(r => r.isDueThisWeek).length}</div>
                   </div>
                   <div className="p-2 bg-muted/30 rounded-md border border-border/20 text-center">
                     <div className="text-xs text-muted-foreground">Total</div>
-                    <div className="text-lg font-bold text-primary">{scheduledReviews.length}</div>
+                    <div className="text-lg font-bold text-primary">{totalCount}</div>
                   </div>
                 </div>
 
@@ -378,12 +388,12 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                   
                   <TabsContent value="upcoming" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
-                      {scheduledReviews.length === 0 ? (
+                      {reviews.length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">
                           No upcoming reviews
                         </div>
                       ) : (
-                        scheduledReviews.map(review => (
+                        reviews.map(review => (
                           <ReviewCard key={review.nodeId} review={review} />
                         ))
                       )}
@@ -392,12 +402,12 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                   
                   <TabsContent value="overdue" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
-                      {scheduledReviews.filter(r => r.isDue).length === 0 ? (
+                      {reviews.filter(r => r.isDue).length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">
                           No overdue reviews
                         </div>
                       ) : (
-                        scheduledReviews.filter(r => r.isDue).map(review => (
+                        reviews.filter(r => r.isDue).map(review => (
                           <ReviewCard key={review.nodeId} review={review} />
                         ))
                       )}
@@ -406,12 +416,12 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                   
                   <TabsContent value="all" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
-                      {scheduledReviews.length === 0 ? (
+                      {reviews.length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">
                           No nodes to review
                         </div>
                       ) : (
-                        scheduledReviews.map(review => (
+                        reviews.map(review => (
                           <ReviewCard key={review.nodeId} review={review} />
                         ))
                       )}
@@ -489,8 +499,8 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                   activeModule={currentModule}
                   isListening={isListening}
                   isLoadingSTT={isLoadingSTT}
-                  startRecording={startRecording}
-                  stopRecording={stopRecording}
+                  startRecording={() => {}}
+                  stopRecording={async () => null}
                   setVoiceTranscriptTarget={setVoiceTranscriptTarget}
                   isVoiceModeActive={isVoiceModeActive}
                 />

@@ -209,7 +209,8 @@ export function NodeDisplay({
         setShowAttentionCheck(false);
         setShowRecall(true);
         setHideContentForRecall(true); 
-        toast({ description: "Content now hidden. Explain the concept in your own words.", className: "bg-card border-secondary text-foreground" });
+        const recallPrompt = node.download?.recallPrompt || "Explain the concept in your own words";
+        toast({ description: `Content now hidden. ${recallPrompt}`, className: "bg-card border-secondary text-foreground" });
     }
   };
 
@@ -263,12 +264,20 @@ export function NodeDisplay({
     if (currentEpicStep === 'probe' && 
         currentProbeQuestionIndex < probeQuestions.length - 1) {
       setCurrentProbeQuestionIndex(prev => prev + 1);
-      setEpicInput('');
+      setEpicInput(''); // Clear input for next question
       clearEvaluationResultCallback();
     } else {
       // If we're at the last question, proceed as normal
       onProceedAfterSuccess();
     }
+  };
+
+  // Add this function to handle returning to content properly
+  const handleBackToContent = () => {
+    setShowRecall(false);
+    setHideContentForRecall(false);
+    setShowAttentionCheck(true); // Re-show the attention check
+    clearEvaluationResultCallback();
   };
 
   const renderEvaluationFeedbackPanel = () => {
@@ -444,7 +453,7 @@ export function NodeDisplay({
                   Knowledge Recall
                 </CardTitle>
                 <CardDescription>
-                  Explain the concept in your own words
+                  {node.download?.recallPrompt || "Explain the concept in your own words"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -462,7 +471,7 @@ export function NodeDisplay({
                         id="recall-input"
                         value={recallInput || ''} 
                         onChange={(e) => setRecallInput(e.target.value)}
-                        placeholder="Explain this concept in your own words..."
+                        placeholder={node.download?.recallPrompt || "Explain this concept in your own words..."}
                         className="neuro-input min-h-[150px] resize-none pr-spacing-lg"
                         disabled={isLoadingEvaluation}
                       />
@@ -491,10 +500,7 @@ export function NodeDisplay({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setShowRecall(false);
-                        setHideContentForRecall(false);
-                      }}
+                      onClick={handleBackToContent}
                       className="neuro-button"
                       disabled={isLoadingEvaluation}
                     >

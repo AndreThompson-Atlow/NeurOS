@@ -1126,7 +1126,7 @@ export function useLearningSession() {
         }
       }
     } else if (currentPhase === 'install') {
-      // Original install phase logic
+      // Install phase logic
       let nextStep = currentEpicStep;
       let shouldAdvanceNode = false;
 
@@ -1135,7 +1135,8 @@ export function useLearningSession() {
 
       if (currentStepIndex < epicStepsOrder.length - 1) {
         nextStep = epicStepsOrder[currentStepIndex + 1];
-        if (nextStep === 'probe') fetchProbeQuestionsInternalCallback(); 
+        // Note: don't call fetchProbeQuestionsInternalCallback directly here
+        // it will be triggered by the state change when currentEpicStep is updated
       } else { 
         shouldAdvanceNode = true; 
       }
@@ -1145,39 +1146,41 @@ export function useLearningSession() {
         
         nextNodeIndex++;
         const currentDomainNodes = currentModule.domains[nextDomainIndex]?.nodes;
+        // Check if there are more nodes in this domain
         if (currentDomainNodes && nextNodeIndex < currentDomainNodes.length) {
           // Just move to next node in install
-          nextEpicStep = 'explain'; // Set the next EPIC step back to explain for the new node
+          nextEpicStep = 'explain'; // Reset EPIC step for new node
           setCurrentEpicStep('explain');
         } else {
-          // Move to next domain or complete module
+          // No more nodes in this domain, find the next domain with nodes
           nextDomainIndex++;
           nextNodeIndex = 0;
           
           if (nextDomainIndex < currentModule.domains.length) {
+            // Search for the next domain with nodes
             let foundDomainWithNodes = false;
-            while(nextDomainIndex < currentModule.domains.length){
-              if(currentModule.domains[nextDomainIndex]?.nodes?.length > 0){
+            while (nextDomainIndex < currentModule.domains.length) {
+              if (currentModule.domains[nextDomainIndex]?.nodes?.length > 0) {
                 foundDomainWithNodes = true;
                 break;
               }
-              nextDomainIndex++; 
+              nextDomainIndex++;
             }
             
-            if(!foundDomainWithNodes){ 
-              // No more domains, complete module
+            if (!foundDomainWithNodes) {
+              // No more domains with nodes, complete the module
               updateModuleStatusCallback(currentModuleId!, 'installed');
               setLearningState(prev => ({ ...prev, activeSession: null }));
               setActiveInteraction('finished');
               queueToast({ title: "Module Installation Complete!", description: `Completed ${currentModule.title}.` });
               return;
             } else {
-              // Found a valid domain with nodes, set EPIC step back to explain for the new domain
-              nextEpicStep = 'explain';
+              // Found a valid domain with nodes
+              nextEpicStep = 'explain'; // Reset EPIC step for new domain/node
               setCurrentEpicStep('explain');
             }
           } else {
-            // No more domains, complete module
+            // No more domains, complete the module
             updateModuleStatusCallback(currentModuleId!, 'installed');
             setLearningState(prev => ({ ...prev, activeSession: null }));
             setActiveInteraction('finished');
@@ -1188,9 +1191,6 @@ export function useLearningSession() {
       } else {
         // Just update the EPIC step
         setCurrentEpicStep(nextStep);
-        if (nextStep === 'probe') {
-          fetchProbeQuestionsInternalCallback();
-        }
         return; // Don't update the session state, just the EPIC step
       }
     }
@@ -1216,14 +1216,6 @@ export function useLearningSession() {
     setCurrentEpicStep(nextEpicStep); 
     setProbeQuestions([]); 
     clearEvaluationResultCallback();
-    
-    // Pre-generate knowledge checks if moving to a new node in download phase
-    // Commenting out for now to fix circular reference issue
-    // if (nextPhase === 'download') {
-    //   setTimeout(() => {
-    //     generateKnowledgeChecksCallback(currentModuleId || undefined, nextDomainIndex, nextNodeIndex);
-    //   }, 500);
-    // }
   }, [activeSession, currentActiveModule, currentEpicStep, queueToast, updateModuleStatusCallback, clearEvaluationResultCallback, probeQuestions, _markNodeUnderstoodInternalCallback, setLearningState, setActiveInteraction, setProbeQuestions, setCurrentEpicStep]);
 
   const fetchProbeQuestionsInternalCallback = useCallback(async () => {
