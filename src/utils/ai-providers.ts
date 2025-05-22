@@ -37,7 +37,7 @@ export async function callGeminiAPI(prompt: string): Promise<AIProviderResponse>
     
     // Make a direct HTTP request to the Gemini API
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.models.gemini.apiName}:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/${CONFIG.models.gemini.apiName}:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {
@@ -207,8 +207,23 @@ export async function callClaudeAPI(prompt: string): Promise<AIProviderResponse>
  * Call any configured AI provider 
  */
 export async function callAIProvider(prompt: string, provider?: string): Promise<AIProviderResponse> {
-  // Use specified provider or default from config
-  const selectedProvider = provider || CONFIG.AI.provider;
+  // Use specified provider, or try to get from learning state (if available in browser), or default from config
+  let selectedProvider = provider || CONFIG.AI.provider;
+  
+  // Try to get user-selected provider from localStorage if we're in the browser
+  if (!provider && typeof window !== 'undefined') {
+    try {
+      const learningStateJSON = localStorage.getItem('neuroosV2LearningState_v0_1_3');
+      if (learningStateJSON) {
+        const learningState = JSON.parse(learningStateJSON);
+        if (learningState?.aiProvider) {
+          selectedProvider = learningState.aiProvider;
+        }
+      }
+    } catch (error) {
+      console.error("Error accessing user AI provider preference:", error);
+    }
+  }
   
   console.log(`Using AI provider: ${selectedProvider}`);
   

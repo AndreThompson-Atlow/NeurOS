@@ -7,9 +7,9 @@
 
 // Try to use environment variables first, then fall back to hardcoded defaults
 // Using a backup key that should work with basic Gemini models
-export const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyBhNiNu8Z_LTcj0WT2zYbN-qz-J-iMi2cI';
-export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
-export const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || 'sk-ant-api03-ZT3gFgPZr_GwLzeS-pDXIQ-Ue2IMkZQlrYHWdblhVx1h0HXUwEHy6RQeX_0kkfcr01LQRsLMBuMQxkH-c5I2VQ-7l-7HgAA';
+export const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyAHfuVIAmPz1qbyam2P71STgAqVmzGUSzA';
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
+export const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || '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';
 
 // You can add other API keys or configuration values here
 export const CONFIG = {
@@ -28,8 +28,8 @@ export const CONFIG = {
   },
   models: {
     gemini: {
-      displayName: 'Gemini Pro',
-      apiName: 'gemini-pro',
+      displayName: 'Gemini 1.5 Pro',
+      apiName: 'gemini-1.5-pro',
       temperature: 0.7,
       maxTokens: 800
     },

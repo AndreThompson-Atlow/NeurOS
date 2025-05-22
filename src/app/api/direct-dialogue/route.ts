@@ -32,18 +32,18 @@ You are the dialogue generation system for NeuroOS v2, an advanced cognitive lea
 Your task is to generate natural dialogue between AI personalities about a specific learning concept.
 
 ## Learning Context
-Module: ${moduleTitle}
-Domain: ${domainTitle}
-Node Title: ${nodeTitle}
-Node Short Definition: ${nodeShortDefinition}
-Node Clarification: ${nodeClarification.substring(0, 500)}...
+Module: ${moduleTitle || 'Unknown Module'}
+Domain: ${domainTitle || 'General Knowledge'}
+Node Title: ${nodeTitle || 'Concept'}
+Node Short Definition: ${nodeShortDefinition || 'No definition provided'}
+Node Clarification: ${nodeClarification ? nodeClarification.substring(0, 500) + '...' : 'No clarification provided'}
 
 ## The Personalities
-${personalitiesDetails.map(p => `- ${p.name} (${p.alignment}): ${p.personalityProfile?.substring(0, 100) || 'A helpful AI'}`).join('\n')}
+${personalitiesDetails.map(p => `- ${p.name} (${p.alignment || 'neutral'}): ${p.personalityProfile ? p.personalityProfile.substring(0, 100) + '...' : 'A helpful AI'}`).join('\n')}
 
 ${previousDialogue && previousDialogue.length > 0 ? 
 `## Recent Conversation
-${previousDialogue.slice(-5).map((d: {characterId: string, message: string}) => `- ${d.characterId}: "${d.message}"`).join('\n')}` : ''}
+${previousDialogue.slice(-5).map((d: {characterId: string, message: string}) => `- ${d.characterId || 'unknown'}: "${d.message || 'No message'}""`).join('\n')}` : ''}
 
 ## Instructions
 Generate 2 dialogue turns where the personalities discuss the concept. Keep responses concise and educational.
@@ -85,7 +85,7 @@ FORMAT YOUR RESPONSE AS VALID JSON with this structure:
     
     // Make a direct HTTP request to the Gemini API
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key=${apiKey}`,
       {
         method: 'POST',
         headers: {

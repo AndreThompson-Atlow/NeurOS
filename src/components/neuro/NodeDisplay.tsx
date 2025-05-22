@@ -126,52 +126,62 @@ export function NodeDisplay({
         setRecallInput('');
         setEpicInput('');
     }
-    
-    if (node) {
-        const currentNodeFamiliar = node.familiar || node.status === 'familiar' || node.status === 'understood';
-        const currentNodeUnderstood = node.understood || node.status === 'understood'; 
-        const isNodeNewAndNotReviewed = !currentNodeFamiliar && node.status === 'new' && currentInteraction !== 'reviewing';
+  }, [node?.id, evaluationResult, clearEvaluationResultCallback]);
 
-        if (currentInteraction === 'reviewing') {
-            setShowAttentionCheck(false);
-            setShowRecall(false); 
-            setHideContentForRecall(false); 
-        } else if (phase === 'download' && isNodeNewAndNotReviewed) {
-            if (evaluationResult && !evaluationResult.isPass && showRecall) {
-                setShowAttentionCheck(false);
-                setHideContentForRecall(true);
-            } else if (showRecall && (!evaluationResult || !evaluationResult.isPass)) { 
-                setShowAttentionCheck(false);
-                setHideContentForRecall(true); 
-            } else if (evaluationResult && evaluationResult.isPass && showRecall) { 
-                setShowAttentionCheck(false);
-                setShowRecall(true); 
-                setHideContentForRecall(false); 
-            } else { 
-                setShowAttentionCheck(true);
-                setShowRecall(false);
-                setHideContentForRecall(false);
-            }
-        } else if (phase === 'install' && (currentInteraction === 'learning' && (node.status === 'familiar' || node.status === 'downloaded') || (node.status === 'installing' && !currentNodeUnderstood))) {
-            setShowAttentionCheck(false);
-            setShowRecall(false);
-            setHideContentForRecall(false);
-             if (probeQuestions.length === 0 && !isLoadingProbe && currentEpicStep === 'probe' && (!evaluationResult || evaluationResult.isPass)) {
-                 onFetchProbe();
-             }
-        } else { 
-            setShowAttentionCheck(false);
-            setShowRecall(false);
-            setHideContentForRecall(false);
-        }
-    } else { 
+  useEffect(() => {
+    if (!node) {
         setShowAttentionCheck(true);
         setShowRecall(false);
         setHideContentForRecall(false);
         setRecallInput('');
         setEpicInput('');
+        return;
     }
-  }, [node?.id, phase, currentEpicStep, evaluationResult, clearEvaluationResultCallback, onFetchProbe, isLoadingProbe, probeQuestions.length, currentInteraction, showRecall, node, isNodeUnderstood]);
+
+    const currentNodeFamiliar = node.familiar || node.status === 'familiar' || node.status === 'understood';
+    const currentNodeUnderstood = node.understood || node.status === 'understood'; 
+    const isNodeNewAndNotReviewed = !currentNodeFamiliar && node.status === 'new' && currentInteraction !== 'reviewing';
+
+    if (currentInteraction === 'reviewing') {
+        setShowAttentionCheck(false);
+        setShowRecall(false); 
+        setHideContentForRecall(false); 
+    } else if (phase === 'download' && isNodeNewAndNotReviewed) {
+        if (evaluationResult && !evaluationResult.isPass && showRecall) {
+            setShowAttentionCheck(false);
+            setHideContentForRecall(true);
+        } else if (showRecall && (!evaluationResult || !evaluationResult.isPass)) { 
+            setShowAttentionCheck(false);
+            setHideContentForRecall(true); 
+        } else if (evaluationResult && evaluationResult.isPass && showRecall) { 
+            setShowAttentionCheck(false);
+            setShowRecall(true); 
+            setHideContentForRecall(false); 
+        } else { 
+            setShowAttentionCheck(true);
+            setShowRecall(false);
+            setHideContentForRecall(false);
+        }
+    } else if (phase === 'install' && (currentInteraction === 'learning' && (node.status === 'familiar' || node.status === 'downloaded') || (node.status === 'installing' && !currentNodeUnderstood))) {
+        setShowAttentionCheck(false);
+        setShowRecall(false);
+        setHideContentForRecall(false);
+    } else { 
+        setShowAttentionCheck(false);
+        setShowRecall(false);
+        setHideContentForRecall(false);
+    }
+  }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, showRecall, isNodeUnderstood]);
+  
+  // Separate effect for probe fetching to avoid nested state updates during render
+  useEffect(() => {
+    if (node && phase === 'install' && currentInteraction === 'learning' && 
+        (node.status === 'familiar' || node.status === 'downloaded' || (node.status === 'installing' && !isNodeUnderstood)) && 
+        probeQuestions.length === 0 && !isLoadingProbe && currentEpicStep === 'probe' && 
+        (!evaluationResult || evaluationResult.isPass)) {
+        onFetchProbe();
+    }
+  }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, isLoadingProbe, probeQuestions.length, onFetchProbe, isNodeUnderstood]);
 
 
   const showEPIC = phase === 'install' && (currentInteraction === 'reviewing' || (node && (node.status === 'familiar' || node.status === 'downloaded' || (node.status === 'installing' && !isNodeUnderstood) || node.status === 'needs_review')));
@@ -383,7 +393,7 @@ export function NodeDisplay({
                     <div className="relative">
                       <Textarea
                         id="recall-input"
-                        value={recallInput}
+                        value={recallInput || ''} 
                         onChange={(e) => setRecallInput(e.target.value)}
                         placeholder="Explain this concept in your own words..."
                         className="neuro-input min-h-[150px] resize-none pr-spacing-lg"
@@ -546,7 +556,7 @@ export function NodeDisplay({
                     <div className="relative">
                       <Textarea
                         id="epic-input"
-                        value={epicInput}
+                        value={epicInput || ''}
                         onChange={(e) => setEpicInput(e.target.value)}
                         placeholder="Enter your response..."
                         className="neuro-input min-h-[150px] resize-none pr-spacing-lg"

@@ -381,6 +381,7 @@ export interface UserLearningState {
     activeReviewSession: ActiveReviewSession | null;
     isThoughtAnalyzerEnabled: boolean;
     currentLearningFlow?: string;
+    aiProvider?: string; // Current AI provider: 'gemini', 'openai', or 'claude'
 }
 
 export interface KnowledgeCheckQuestion {

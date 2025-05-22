@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Module, ModuleStatus, ModuleType } from '@/types/neuro';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowLeft, Trash2, CheckCircle, DownloadCloud, Zap, BookOpen, Settings2, Library, Shield, Star, FlaskConical, RefreshCwOff, Brain } from 'lucide-react'; // Added Brain for Thought Analyzer
+import { ArrowLeft, Trash2, CheckCircle, DownloadCloud, Zap, BookOpen, Settings2, Library, Shield, Star, FlaskConical, RefreshCwOff, Brain, Bot, Database, AlertTriangle } from 'lucide-react'; // Added icons for settings
 import { Badge } from '@/components/ui/badge';
 import { useLearningSession } from '@/hooks/useLearningSession';
 import { Switch } from '@/components/ui/switch'; // Added Switch import
@@ -47,7 +46,7 @@ const getModuleTypeVisuals = (type: ModuleType | undefined) => {
 
 export function AdminPanel({ modules, onSetModuleStatus, onRemoveModule, onExit }: AdminPanelProps) {
   const modulesArray = Object.values(modules);
-  const { admin_markAllInstalledNodesForReview, isThoughtAnalyzerEnabled, toggleThoughtAnalyzer } = useLearningSession();
+  const { admin_markAllInstalledNodesForReview, isThoughtAnalyzerEnabled, toggleThoughtAnalyzer, aiProvider, setAIProvider, admin_clearUserData } = useLearningSession();
 
   return (
     <div className="container mx-auto p-4 max-w-5xl">
@@ -84,11 +83,61 @@ export function AdminPanel({ modules, onSetModuleStatus, onRemoveModule, onExit 
                     />
                   </div>
                   <div className="flex items-center justify-between space-x-2 p-3 bg-muted/20 rounded-md border border-border/20">
+                    <Label htmlFor="ai-provider-select" className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                      <Bot size={16} className="text-primary"/>
+                      AI Provider
+                    </Label>
+                    <Select
+                      value={aiProvider || 'gemini'}
+                      onValueChange={(value) => setAIProvider(value)}
+                    >
+                      <SelectTrigger id="ai-provider-select" className="w-[180px] h-9 text-xs ui-select-trigger">
+                        <SelectValue placeholder="Select AI provider" />
+                      </SelectTrigger>
+                      <SelectContent className="ui-select-content">
+                        <SelectItem value="gemini" className="text-xs ui-select-item">
+                          Gemini
+                        </SelectItem>
+                        <SelectItem value="openai" className="text-xs ui-select-item">
+                          OpenAI
+                        </SelectItem>
+                        <SelectItem value="claude" className="text-xs ui-select-item">
+                          Claude
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-between space-x-2 p-3 bg-muted/20 rounded-md border border-border/20">
                     <Label htmlFor="mark-review-button" className="text-sm font-medium text-foreground/90">
                         Force Review for All Installed Nodes
                     </Label>
                     <Button variant="outline" size="sm" onClick={() => admin_markAllInstalledNodesForReview()} id="mark-review-button">
                         <RefreshCwOff size={16} className="mr-1" /> Mark All for Review
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between space-x-2 p-3 bg-muted/20 rounded-md border border-border/20">
+                    <div>
+                      <Label htmlFor="clear-data-button" className="text-sm font-medium text-foreground/90 flex items-center gap-2">
+                          <Database size={16} className="text-destructive"/>
+                          Clear All User Data
+                      </Label>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Resets all modules and settings to default. Cannot be undone.
+                      </p>
+                    </div>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      onClick={() => {
+                        const confirm = window.confirm("This will clear ALL user data and reset the application. This cannot be undone. Are you sure?");
+                        if (confirm) {
+                          admin_clearUserData();
+                        }
+                      }} 
+                      id="clear-data-button"
+                    >
+                        <AlertTriangle size={16} className="mr-1" /> Clear All Data
                     </Button>
                   </div>
                 </CardContent>

@@ -53,6 +53,7 @@ import {
 } from '@/data/chronicle-logic';
 import _ from 'lodash';
 import { placeholderEPIC } from '@/data/modules/_common';
+import { CONFIG } from '@/config/keys';
 import type { Dungeon, EncounterDefinition as ChronicleEncounterDefinition, ChronicleRunState, PlayerState, Coordinates, MapCell as ChronicleMapCell, Spellbook, Item as ChronicleItem, Quest, QuestObjective, BattleParticipant, Ability as ChronicleAbility, Floor, BattleRewards, BattleActionRequest, EPICChallenge as ChronicleEPICChallenge, EPICResponse as ChronicleEPICResponse, Item, Companion as ChronicleCompanion, Specter, Construct, Archetype, EntityStats as ChronicleEntityStats, Position, EffectType, CoreEntityType, Battle } from '@/types/chronicle';
 import { generateKnowledgeChecks } from '@/ai/flows/generate-knowledge-checks';
 import type { KnowledgeCheckQuestion, KnowledgeCheckSet } from '@/types/neuro';
@@ -150,7 +151,8 @@ const getDefaultLearningState = async (): Promise<UserLearningState> => {
         activeReadingSession: null,
         currentUserProfile: defaultUserProfile,
         activeReviewSession: null,
-        isThoughtAnalyzerEnabled: false, 
+        isThoughtAnalyzerEnabled: false,
+        aiProvider: CONFIG.AI.provider,
     };
 };
 
@@ -355,6 +357,7 @@ export function useLearningSession() {
           currentUserProfile: defaultUserProfileSync,
           activeReviewSession: null,
           isThoughtAnalyzerEnabled: false,
+          aiProvider: CONFIG.AI.provider,
       };
   });
 
@@ -2379,6 +2382,21 @@ export function useLearningSession() {
     });
   }, [queueToast, setLearningState]);
 
+  // Set AI provider function
+  const setAIProviderCallback = useCallback((provider: string) => {
+    // Only accept valid providers
+    if (['gemini', 'openai', 'claude'].includes(provider)) {
+      setLearningState(prev => {
+        const newState = { ...prev, aiProvider: provider };
+        queueToast({ title: "AI Provider", description: `Set to ${provider.charAt(0).toUpperCase() + provider.slice(1)}` });
+        console.log(`AI provider set to: ${provider}`);
+        return newState;
+      });
+    } else {
+      console.error(`Invalid AI provider: ${provider}`);
+      queueToast({ title: "Error", description: `Invalid AI provider: ${provider}`, variant: "destructive" });
+    }
+  }, [queueToast, setLearningState]);
 
   const advanceReviewSessionCallback = useCallback(() => {
     setLearningState(prev => {
@@ -2763,5 +2781,7 @@ export function useLearningSession() {
     generateKnowledgeChecks: generateKnowledgeChecksCallback,
     submitKnowledgeCheckAnswer: submitKnowledgeCheckAnswerCallback,
     ensureProperLearningFlow: ensureProperLearningFlowCallback,
+    aiProvider: learningState.aiProvider || CONFIG.AI.provider,
+    setAIProvider: setAIProviderCallback,
   };
 }
