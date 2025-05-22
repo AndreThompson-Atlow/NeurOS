@@ -1147,6 +1147,7 @@ export function useLearningSession() {
         const currentDomainNodes = currentModule.domains[nextDomainIndex]?.nodes;
         if (currentDomainNodes && nextNodeIndex < currentDomainNodes.length) {
           // Just move to next node in install
+          nextEpicStep = 'explain'; // Set the next EPIC step back to explain for the new node
           setCurrentEpicStep('explain');
         } else {
           // Move to next domain or complete module
@@ -1170,6 +1171,10 @@ export function useLearningSession() {
               setActiveInteraction('finished');
               queueToast({ title: "Module Installation Complete!", description: `Completed ${currentModule.title}.` });
               return;
+            } else {
+              // Found a valid domain with nodes, set EPIC step back to explain for the new domain
+              nextEpicStep = 'explain';
+              setCurrentEpicStep('explain');
             }
           } else {
             // No more domains, complete module
@@ -1183,7 +1188,9 @@ export function useLearningSession() {
       } else {
         // Just update the EPIC step
         setCurrentEpicStep(nextStep);
-        setProbeQuestions(nextStep === 'probe' ? probeQuestions : []); 
+        if (nextStep === 'probe') {
+          fetchProbeQuestionsInternalCallback();
+        }
         return; // Don't update the session state, just the EPIC step
       }
     }
@@ -1222,6 +1229,16 @@ export function useLearningSession() {
   const fetchProbeQuestionsInternalCallback = useCallback(async () => {
     if (!currentNode || !currentActiveModule || isLoading) return;
     setIsLoading(true);
+    
+    // First check if the node has predefined probe questions in its epic object
+    if (currentNode.epic && currentNode.epic.probeQuestions && Array.isArray(currentNode.epic.probeQuestions) && currentNode.epic.probeQuestions.length > 0) {
+      console.log("Using predefined probe questions from the module");
+      setProbeQuestions(currentNode.epic.probeQuestions);
+      setIsLoading(false);
+      return;
+    }
+    
+    // If no predefined questions exist, generate them via the AI
     const characterId = (currentActiveModule as Module).defaultCompanion || await selectAppropriateCharacterId('install');
     try {
       const contextContent = `Module: ${(currentActiveModule as Module).title}, Domain: ${currentDomain?.title}, Concept: ${currentNode.title}, Definition: ${currentNode.shortDefinition}, Clarification: ${currentNode.download.clarification}`;

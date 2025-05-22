@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Download, Check, BrainCircuit, Lightbulb, Search, Wrench, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, Info, FileText as FileTextIcon, HelpCircle, ExternalLink, MessageSquare, Mic, MicOff, ArrowRight, EyeOff, Eye, Edit3, Volume2, VolumeX } from 'lucide-react';
+import { Download, Check, BrainCircuit, Lightbulb, Search, Wrench, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, Info, FileText as FileTextIcon, HelpCircle, ExternalLink, MessageSquare, Mic, MicOff, ArrowRight, EyeOff, Eye, Edit3, Volume2, VolumeX, CheckCheck, ChevronRight } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ import { MultiPersonaChatPanel } from './MultiPersonaChatPanel';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Character } from '@/types/characterTypes';
 import type { GenerateReadingDialogueOutput, DialogueTurn as GenkitDialogueTurn } from '@/ai/flows/types/generateReadingDialogueTypes';
+import { Progress } from '@/components/ui/progress';
 
 
 interface NodeDisplayProps {
@@ -114,6 +115,9 @@ export function NodeDisplay({
   const isNodeFamiliar = useMemo(() => node?.familiar || node?.status === 'familiar' || node?.status === 'understood', [node]);
   const isNodeUnderstood = useMemo(() => node?.understood || node?.status === 'understood', [node]);
 
+  // Add state for tracking current probe question index
+  const [currentProbeQuestionIndex, setCurrentProbeQuestionIndex] = useState(0);
+
   // Separate useEffect for initializing the attention check on node change
   useEffect(() => {
     if (node && prevNodeId.current !== node.id) {
@@ -177,6 +181,16 @@ export function NodeDisplay({
     }
   }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, isLoadingProbe, probeQuestions.length, onFetchProbe, isNodeUnderstood]);
 
+  // Add this to existing useEffect cleanup
+  useEffect(() => {
+    // Reset current probe question index when node or epic step changes
+    setCurrentProbeQuestionIndex(0);
+    
+    // Cleanup function
+    return () => {
+      setCurrentProbeQuestionIndex(0);
+    };
+  }, [node?.id, currentEpicStep]);
 
   const showEPIC = phase === 'install' && (currentInteraction === 'reviewing' || (node && (node.status === 'familiar' || node.status === 'downloaded' || (node.status === 'installing' && !isNodeUnderstood) || node.status === 'needs_review')));
 
@@ -208,9 +222,14 @@ export function NodeDisplay({
 
    const handleEpicSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!showEPIC || isLoadingEvaluation) return;
-        setVoiceTranscriptTarget(setEpicInput);
-        onSubmitEpic(epicInput);
+        if (!epicInput || epicInput.trim() === '') return;
+        
+        // When answering probe questions, we need special handling for multiple questions
+        if (currentEpicStep === 'probe' && probeQuestions.length > 0) {
+          onSubmitEpic(epicInput);
+        } else {
+          onSubmitEpic(epicInput);
+        }
    };
 
   const handleVoiceInputToggle = async (targetSetter: React.Dispatch<React.SetStateAction<string>>) => {
@@ -239,31 +258,85 @@ export function NodeDisplay({
       }
   };
 
-  const renderEvaluationFeedbackPanel = () => {
-      if (!evaluationResult) return null;
+  // Add a function to advance to the next probe question
+  const handleAdvanceToNextProbeQuestion = () => {
+    if (currentEpicStep === 'probe' && 
+        currentProbeQuestionIndex < probeQuestions.length - 1) {
+      setCurrentProbeQuestionIndex(prev => prev + 1);
+      setEpicInput('');
+      clearEvaluationResultCallback();
+    } else {
+      // If we're at the last question, proceed as normal
+      onProceedAfterSuccess();
+    }
+  };
 
-      const isPassed = evaluationResult.isPass;
-      return (
-          <div className={cn("p-spacing-md mb-spacing-md border rounded-lg", isPassed ? "bg-green-500/10 border-green-500/40" : "bg-amber-500/10 border-amber-500/40", "neuro-fade-in")}>
-              <div className="flex items-center gap-spacing-sm mb-spacing-sm">
-                  {isPassed ? <CheckCircle className="text-green-500" size={20} /> : <AlertTriangle className="text-amber-500" size={20} />}
-                  <h4 className="font-semibold">{isPassed ? "Understanding Verified" : "Needs Refinement"}</h4>
-              </div>
-              <p className="text-sm mb-spacing-md opacity-90">{evaluationResult.feedback}</p>
-              <div className="flex flex-wrap gap-spacing-sm">
-                  {!isPassed && (
-                      <Button variant="outline" size="sm" onClick={handleReviseAnswer} className="text-xs h-8 neuro-button">
-                          <Edit3 size={14} className="mr-spacing-xs" /> Revise Answer
-                      </Button>
-                  )}
-                  {isPassed && (
-                      <Button variant="outline" size="sm" onClick={onProceedAfterSuccess} className="text-xs h-8 neuro-button">
-                          <ArrowRight size={14} className="mr-spacing-xs" /> Continue
-                      </Button>
-                  )}
-              </div>
-          </div>
-      );
+  const renderEvaluationFeedbackPanel = () => {
+    if (!evaluationResult) return null;
+    
+    const isProbeWithMoreQuestions = currentEpicStep === 'probe' && 
+                                     currentProbeQuestionIndex < probeQuestions.length - 1;
+    
+    const continueButtonText = isProbeWithMoreQuestions 
+      ? "Next Question" 
+      : currentEpicStep === 'connect' 
+        ? "Next Node" 
+        : "Next Step";
+
+    return (
+      <div className="mt-spacing-md">
+        <Card className={cn(
+          "neuro-card border-l-4",
+          evaluationResult.isPass ? "border-l-emerald-500" : "border-l-destructive"
+        )}>
+          <CardHeader className="pb-spacing-sm">
+            <CardTitle className={cn(
+              "text-md flex items-center gap-spacing-sm font-medium",
+              evaluationResult.isPass ? "text-emerald-500" : "text-destructive"
+            )}>
+              {evaluationResult.isPass ? (
+                <><CheckCheck size={18} /> Success</>
+              ) : (
+                <><AlertTriangle size={18} /> Needs Improvement</>
+              )}
+              <span className="ml-2 text-sm font-normal">
+                Score: {evaluationResult.score}/100
+              </span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className={cn(
+            "text-sm",
+            evaluationResult.isPass ? "text-slate-200" : "text-destructive/90"
+          )}>
+            <p>{evaluationResult.overallFeedback}</p>
+          </CardContent>
+          <CardFooter className="pt-spacing-sm border-t border-border/30 flex justify-between">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleReviseAnswer}
+              className="text-muted-foreground text-xs neuro-button"
+            >
+              <Edit3 size={14} className="mr-spacing-xs" /> Revise
+            </Button>
+            
+            <Button 
+              variant={evaluationResult.isPass ? "default" : "secondary"} 
+              size="sm" 
+              onClick={isProbeWithMoreQuestions ? handleAdvanceToNextProbeQuestion : onProceedAfterSuccess}
+              disabled={!evaluationResult.isPass}
+              className="neuro-button"
+            >
+              {continueButtonText} {isProbeWithMoreQuestions ? (
+                <ChevronRight size={14} className="ml-spacing-xs" />
+              ) : (
+                <ArrowRight size={14} className="ml-spacing-xs" />
+              )}
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
   };
 
   const renderTermsWithDefinitions = (terms: string[], title: string, termType: 'keyTerm' | 'moduleTag' = 'keyTerm') => {
@@ -478,12 +551,13 @@ export function NodeDisplay({
               <Loader2 className="animate-spin h-4 w-4" />
               <span>Generating thoughtful questions...</span>
             </div>
-          ) : (
+          ) : probeQuestions.length > 0 ? (
             <div className="space-y-spacing-sm">
-              {probeQuestions.map((question, i) => (
-                <p key={i} className="text-sm">{question}</p>
-              ))}
+              <p className="text-sm font-semibold">Question {currentProbeQuestionIndex + 1} of {probeQuestions.length}:</p>
+              <p className="text-sm">{probeQuestions[currentProbeQuestionIndex]}</p>
             </div>
+          ) : (
+            <p className="text-sm opacity-70">No probe questions available.</p>
           )}
         </div>
       </div>

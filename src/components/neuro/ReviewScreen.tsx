@@ -303,9 +303,9 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
   if (!activeReviewSession) {
     return (
       <div className="container mx-auto p-4 max-w-6xl">
-        <div className="flex flex-col md:flex-row gap-spacing-md">
+        <div className="flex flex-col gap-spacing-md">
           {/* Review Start Panel */}
-          <div className="flex-1">
+          <div className="w-full">
             <Card className="shadow-cyan-md" data-alignment="neutral">
               <CardHeader>
                 <CardTitle className="text-2xl font-display text-glow-cyan flex items-center justify-center gap-2">
@@ -342,7 +342,7 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
           </div>
 
           {/* Memory Dashboard */}
-          <div className="md:w-96">
+          <div className="w-full">
             <Card className="shadow-cyan-md border-t-4 border-t-cyan-500">
               <CardHeader className="p-spacing-sm border-b bg-cyan-900/10">
                 <CardTitle className="text-md flex items-center justify-between text-cyan-500">
@@ -376,7 +376,7 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                     <TabsTrigger value="all" onClick={() => setViewMode('all')} className="text-xs">All</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="upcoming" className="max-h-[60vh] overflow-y-auto">
+                  <TabsContent value="upcoming" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
                       {scheduledReviews.length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">
@@ -390,7 +390,7 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="overdue" className="max-h-[60vh] overflow-y-auto">
+                  <TabsContent value="overdue" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
                       {scheduledReviews.filter(r => r.isDue).length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">
@@ -404,7 +404,7 @@ export function ReviewScreen({ onExit }: ReviewScreenProps) {
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="all" className="max-h-[60vh] overflow-y-auto">
+                  <TabsContent value="all" className="max-h-[40vh] overflow-y-auto">
                     <div className="space-y-spacing-sm">
                       {scheduledReviews.length === 0 ? (
                         <div className="text-center text-muted-foreground p-2 text-sm">

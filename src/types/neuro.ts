@@ -167,6 +167,7 @@ export interface NodeEPIC {
   implementPrompt: string;
   connectPrompt: string;
   connectTo?: string[]; // Optional for now, as it was added later
+  probeQuestions?: string[]; // Array of predefined probe questions
   [key: string]: string | string[] | undefined; // Make it indexable by string keys
 }
 
