@@ -11,7 +11,7 @@ import { Loader2, MessageSquare, Send, CornerDownLeft, AlertCircle } from 'lucid
 import { getAlignmentStyling } from './utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import type { GenerateReadingDialogueInput, GenerateReadingDialogueOutput, DialogueTurn as GenkitDialogueTurn } from '@/ai/flows/types/generateReadingDialogueTypes'; 
+import type { GenerateReadingDialogueInput, GenerateReadingDialogueOutput } from '@/ai/flows/types/generateReadingDialogueTypes'; 
 import { cn } from '@/lib/utils';
 
 /**
@@ -40,7 +40,7 @@ interface MultiPersonaChatPanelProps {
     module: Module,
     domain: Domain, 
     personalities: string[],
-    previousDialogue?: GenkitDialogueTurn[] 
+    previousDialogue?: {characterId: string, message: string}[] 
   ) => Promise<GenerateReadingDialogueOutput>;
   isLoadingDialogue: boolean;
 }
@@ -333,21 +333,35 @@ export function MultiPersonaChatPanel({
         return;
       }
       
-      // Generate dialogue response
-      const result = await generateNodeDialogue(
-        currentNode, 
-        module, 
-        currentDomain, 
-        personalityArray,
-        currentChatHistoryForGenkit.slice(-8) // Include more context from previous messages
-      );
+      // Try to generate dialogue response with timeout
+      let timeoutId: NodeJS.Timeout;
+      const timeoutPromise = new Promise<GenerateReadingDialogueOutput>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error("Response timeout - the AI is taking too long to respond"));
+        }, 15000); // 15 second timeout
+      });
+      
+      // Create a race between the actual API call and the timeout
+      const result = await Promise.race([
+        generateNodeDialogue(
+          currentNode, 
+          module, 
+          currentDomain, 
+          personalityArray,
+          currentChatHistoryForGenkit.slice(-8) // Include more context from previous messages
+        ),
+        timeoutPromise
+      ]).finally(() => {
+        clearTimeout(timeoutId);
+      });
 
-      if (result.error) {
-        setError(result.error);
-        toast({ title: "Dialogue Error", description: result.error, variant: "destructive" });
-      } else if (result.dialogue) {
-         // Enrich dialogue with character details and timestamps
-         const enrichedDialogue = result.dialogue.map((turn, index) => {
+      // If we got an error message in the response but still got dialogue,
+      // we'll show the dialogue but also show the error message
+      if (result.error && result.dialogue && result.dialogue.length > 0) {
+        console.warn("Dialogue generated with error:", result.error);
+        
+        // Enrich dialogue with character details and timestamps
+        const enrichedDialogue = result.dialogue.map((turn, index) => {
           const charDetails = getCharacterDetails(turn.characterId);
           return {
             ...turn,
@@ -369,11 +383,131 @@ export function MultiPersonaChatPanel({
           nodeId: currentNode.id,
           history: updatedHistory
         }));
+        
+        // Show a toast with the error, but allow the conversation to continue
+        if (!result.error.includes("fallback")) { // Don't show toast for normal fallback messages
+          toast({ 
+            title: "AI Response Note", 
+            description: "Using backup dialogue system. API response may be limited.", 
+            variant: "default" 
+          });
+        }
+      } else if (result.error) {
+        // We got an error with no usable dialogue
+        setError(result.error);
+        toast({ title: "Dialogue Error", description: result.error, variant: "destructive" });
+        
+        // Add a system message about the error
+        const errorMessage: DialogueTurn = {
+          characterId: 'system_narrator',
+          characterName: 'System',
+          characterAlignment: 'neutral',
+          message: "I apologize, but I'm having trouble generating a response right now. Please try again in a moment.",
+          timestamp: Date.now()
+        };
+        
+        const updatedHistory = [...newHistory, errorMessage];
+        setChatHistory(updatedHistory);
+        
+        // Save updated history to localStorage
+        localStorage.setItem(storageKey, JSON.stringify({
+          moduleId: module.id,
+          domainId: currentDomain.id,
+          nodeId: currentNode.id,
+          history: updatedHistory
+        }));
+      } else if (result.dialogue && result.dialogue.length > 0) {
+        // Successful response with dialogue
+        // Enrich dialogue with character details and timestamps
+        const enrichedDialogue = result.dialogue.map((turn, index) => {
+          const charDetails = getCharacterDetails(turn.characterId);
+          return {
+            ...turn,
+            characterName: charDetails?.name || turn.characterId,
+            characterAvatar: charDetails?.avatarUrl,
+            characterAlignment: charDetails?.alignment,
+            timestamp: Date.now() + (index * 100) // Space out timestamps
+          };
+        });
+        
+        // Update chat history with AI responses
+        const updatedHistory = [...newHistory, ...enrichedDialogue];
+        setChatHistory(updatedHistory);
+        
+        // Save updated history to localStorage
+        localStorage.setItem(storageKey, JSON.stringify({
+          moduleId: module.id,
+          domainId: currentDomain.id,
+          nodeId: currentNode.id,
+          history: updatedHistory
+        }));
+      } else {
+        // Empty dialogue without explicit error
+        setError("Received empty response from the AI. Please try again.");
+        toast({ title: "Dialogue Error", description: "Received empty response from the AI.", variant: "destructive" });
       }
     } catch (e) {
-       const errorMsg = e instanceof Error ? e.message : "Failed to get AI response.";
+      console.error("Chat response error:", e);
+      const errorMsg = e instanceof Error ? e.message : "Failed to get AI response.";
       setError(errorMsg);
-      toast({ title: "Dialogue Error", description: errorMsg, variant: "destructive" });
+      
+      // Add a system message about the error
+      const errorMessage: DialogueTurn = {
+        characterId: 'system_narrator',
+        characterName: 'System',
+        characterAlignment: 'neutral',
+        message: "I apologize, but I'm having trouble connecting to the AI. Let me try a more reliable approach.",
+        timestamp: Date.now()
+      };
+      
+      const updatedHistory = [...newHistory, errorMessage];
+      setChatHistory(updatedHistory);
+      
+      // Save updated history to localStorage
+      localStorage.setItem(storageKey, JSON.stringify({
+        moduleId: module.id,
+        domainId: currentDomain.id,
+        nodeId: currentNode.id,
+        history: updatedHistory
+      }));
+      
+      // Show error toast
+      toast({ 
+        title: "Connection Issue", 
+        description: "There was a problem connecting to the AI service. Using fallback dialogue.", 
+        variant: "destructive" 
+      });
+      
+      // Try again with the fallback method after a short delay
+      setTimeout(() => {
+        try {
+          const fallbackCharacter = guideCharacter || allAiCharacters.find(c => c.id === 'neuros') || allAiCharacters[0];
+          
+          if (fallbackCharacter) {
+            const fallbackResponse: DialogueTurn = {
+              characterId: fallbackCharacter.id,
+              characterName: fallbackCharacter.name,
+              characterAvatar: fallbackCharacter.avatarUrl,
+              characterAlignment: fallbackCharacter.alignment || 'neutral',
+              message: `Regarding your question about ${currentNode.title}, ${currentNode.shortDefinition}. This is a core concept in ${currentDomain.title} worth exploring further.`,
+              timestamp: Date.now() + 100
+            };
+            
+            const finalHistory = [...updatedHistory, fallbackResponse];
+            setChatHistory(finalHistory);
+            
+            // Save to localStorage
+            localStorage.setItem(storageKey, JSON.stringify({
+              moduleId: module.id,
+              domainId: currentDomain.id,
+              nodeId: currentNode.id,
+              history: finalHistory
+            }));
+          }
+        } catch (fallbackError) {
+          console.error("Even fallback response failed:", fallbackError);
+        }
+      }, 1500);
     } finally {
       setIsLoading(false);
     }
@@ -466,6 +600,52 @@ export function MultiPersonaChatPanel({
               <div className="p-spacing-md text-center text-destructive bg-destructive/10 rounded-lg">
                 <AlertCircle className="mx-auto mb-spacing-sm" />
                 <p className="text-sm">{error}</p>
+                {error.includes("API connection") && (
+                  <div className="mt-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      className="mx-auto"
+                      onClick={() => {
+                        // Clear the error message
+                        setError(null);
+                        
+                        // Generate fallback response
+                        try {
+                          const fallbackCharacter = guideCharacter || allAiCharacters.find(c => c.id === 'neuros') || allAiCharacters[0];
+                          
+                          if (fallbackCharacter) {
+                            const fallbackResponse: DialogueTurn = {
+                              characterId: fallbackCharacter.id,
+                              characterName: fallbackCharacter.name,
+                              characterAvatar: fallbackCharacter.avatarUrl,
+                              characterAlignment: fallbackCharacter.alignment || 'neutral',
+                              message: `Let's continue our discussion about ${currentNode.title}. Even though we're in offline mode, I can still help you understand ${currentNode.shortDefinition}.`,
+                              timestamp: Date.now()
+                            };
+                            
+                            // Add to chat history
+                            const updatedHistory = [...chatHistory, fallbackResponse];
+                            setChatHistory(updatedHistory);
+                            
+                            // Save to localStorage
+                            const storageKey = `${CHAT_HISTORY_STORAGE_KEY}_${module.id}`;
+                            localStorage.setItem(storageKey, JSON.stringify({
+                              moduleId: module.id,
+                              domainId: currentDomain.id,
+                              nodeId: currentNode.id,
+                              history: updatedHistory
+                            }));
+                          }
+                        } catch (fallbackError) {
+                          console.error("Error generating fallback response:", fallbackError);
+                        }
+                      }}
+                    >
+                      Use Offline Mode
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

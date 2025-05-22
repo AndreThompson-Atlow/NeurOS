@@ -12,7 +12,8 @@ import type { Character } from '@/types/characterTypes';
 import type { GenerateReadingDialogueOutput } from '@/ai/flows/types/generateReadingDialogueTypes';
 import { cn } from '@/lib/utils';
 import { Card, CardFooter } from '@/components/ui/card';
-// Removed Separator import as it's no longer used here
+import { generateDialogueDirectly } from '@/utils/dialogue-utils';
+import { Separator } from '@/components/ui/separator';
 
 interface ReadingModeDisplayProps {
   module: Module;

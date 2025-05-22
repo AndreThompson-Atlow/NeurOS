@@ -24,7 +24,22 @@ import {
 
 
 export async function generateReadingDialogue(input: GenerateReadingDialogueInput): Promise<GenerateReadingDialogueOutput> {
-  return generateReadingDialogueFlow(input);
+  try {
+    return await generateReadingDialogueFlow(input);
+  } catch (error) {
+    console.error("Error in generateReadingDialogue, using fallback:", error);
+    // Get personalities for fallback dialogue generation
+    const personalitiesDetails: Character[] = [];
+    for (const charId of input.personalities) {
+      const char = await getCharacterById(charId); 
+      if (char) {
+        personalitiesDetails.push(char);
+      }
+    }
+    
+    // Use test dialogue as fallback
+    return generateTestDialogue(input, personalitiesDetails);
+  }
 }
 
 const generateReadingDialoguePromptString = `
@@ -65,14 +80,22 @@ Node Clarification:
    - Provide examples or explanations that clarify the concept
    - If the user question is unclear, ask for clarification in a helpful way
 
-## Output Format
-JSON array of dialogue turns, where each has a "characterId" and a "message".
+## IMPORTANT FORMATTING INSTRUCTIONS
+RETURN ONLY VALID JSON. Your entire response must be a single, properly-formatted JSON object.
+Do not include anything before or after the JSON object.
+Do not use markdown code blocks or other formatting.
+Structure your response exactly like this example:
 
-Example:
 {
   "dialogue": [
-    { "characterId": "{{first_personality_id}}", "message": "The concept of {{nodeTitle}} reminds me of how [reference specific part of node content]. This matters because..." },
-    { "characterId": "{{second_personality_id}}", "message": "Interesting perspective, though I'd suggest that [alternative view]. What do you think about [specific question related to node]?" }
+    { 
+      "characterId": "characterId1", 
+      "message": "First response message that addresses the context."
+    },
+    { 
+      "characterId": "characterId2", 
+      "message": "Second response message that builds on the first one."
+    }
   ]
 }
 
@@ -155,15 +178,38 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
       
       try {
         if (outputText) {
-          // First try to extract JSON from the response
-          const jsonMatch = outputText.match(/\{[\s\S]*\}/);
-          const jsonString = jsonMatch ? jsonMatch[0] : outputText;
+          console.log("Raw AI Response:", outputText); // Add logging to see the raw response
+          
+          // First try to extract JSON from the response with regex - more reliable
+          const jsonMatch = outputText.match(/\{[\s\S]*?\}/g);
+          let jsonString = '';
+          
+          if (jsonMatch && jsonMatch.length > 0) {
+            // Take the largest JSON object which is likely to be the complete one
+            jsonString = jsonMatch.reduce((a: string, b: string) => a.length > b.length ? a : b, '');
+          } else {
+            // If no JSON object found, use the whole text
+            jsonString = outputText;
+          }
           
           try {
+            // Replace escaped quotes for more reliable parsing
+            jsonString = jsonString.replace(/\\"/g, '"').replace(/\\n/g, ' ');
             const parsedOutput = JSON.parse(jsonString);
+            
             if (parsedOutput.dialogue && Array.isArray(parsedOutput.dialogue)) {
               output = { 
-                dialogue: parsedOutput.dialogue,
+                dialogue: parsedOutput.dialogue.map((entry: any) => {
+                  // Ensure each entry has the required fields
+                  if (typeof entry.characterId !== 'string' || typeof entry.message !== 'string') {
+                    return {
+                      characterId: personalitiesDetails[0].id,
+                      message: typeof entry.message === 'string' ? entry.message : 
+                              (typeof entry === 'string' ? entry : JSON.stringify(entry))
+                    };
+                  }
+                  return entry;
+                }),
                 error: parsedOutput.error
               };
             } else if (parsedOutput.conversations || parsedOutput.messages || parsedOutput.response) {
@@ -180,34 +226,69 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
               }
             }
           } catch (jsonParseError) {
-            console.error("JSON parse error:", jsonParseError);
+            console.error("JSON parse error:", jsonParseError, "JSON string:", jsonString);
             
-            // Fallback 1: Try to extract dialogue through regex pattern matching
-            const dialoguePattern = /\"characterId\"\s*:\s*\"([^\"]+)\"\s*,\s*\"message\"\s*:\s*\"([^\"]+)\"/g;
+            // Enhanced regex approach
+            // First try to extract explicit dialogue turns
+            let dialogueTurns: { characterId: string, message: string }[] = [];
+            
+            // Pattern for {"characterId": "...", "message": "..."}
+            const dialoguePattern = /\"characterId\"\s*:\s*\"([^\"]+)\"\s*,\s*\"message\"\s*:\s*\"((?:[^\"]|\\\")*)\"/g;
             const matches = [...outputText.matchAll(dialoguePattern)];
             
             if (matches.length > 0) {
+              dialogueTurns = matches.map(match => ({
+                characterId: match[1],
+                message: match[2].replace(/\\"/g, '"')
+              }));
+              
               output = {
-                dialogue: matches.map(match => ({
-                  characterId: match[1],
-                  message: match[2]
-                })),
+                dialogue: dialogueTurns,
                 error: "Used regex fallback parsing"
               };
             } else {
-              // Fallback 2: Create a basic response from the raw text
-              const textSegments = outputText.split('\n\n').filter((segment: string) => segment.trim().length > 10);
-              if (textSegments.length > 0) {
-                output = {
-                  dialogue: [{
-                    characterId: personalitiesDetails[0].id,
-                    message: textSegments[0].replace(/^[^A-Za-z0-9]+/, '').trim()
-                  }],
-                  error: "Used text segment fallback"
-                };
+              // Look for quoted text that might be dialogue
+              const quotedTextPattern = /\"([^\"]+)\"/g;
+              const quotedMatches = [...outputText.matchAll(quotedTextPattern)];
+              
+              if (quotedMatches.length > 0 && quotedMatches.length <= 6) { // Reasonable number of quotes
+                const longQuotes = quotedMatches
+                  .map(m => m[1])
+                  .filter(text => text.length > 20) // Only reasonably long quotes
+                  .slice(0, 2); // Take at most 2 dialogue turns
+                
+                if (longQuotes.length > 0) {
+                  output = {
+                    dialogue: longQuotes.map((quote, i) => ({
+                      characterId: i < personalitiesDetails.length ? 
+                                   personalitiesDetails[i].id : personalitiesDetails[0].id,
+                      message: quote
+                    })),
+                    error: "Used quoted text fallback parsing"
+                  };
+                }
+              } else {
+                // Last resort: Split by paragraphs and use as dialogue
+                const paragraphs = outputText
+                  .split(/\n\n+/)
+                  .map((p: string) => p.trim())
+                  .filter((p: string) => p.length > 30);
+                
+                if (paragraphs.length > 0) {
+                  output = {
+                    dialogue: paragraphs.slice(0, 2).map((para: string, i: number) => ({
+                      characterId: i < personalitiesDetails.length ? 
+                                  personalitiesDetails[i].id : personalitiesDetails[0].id,
+                      message: para
+                    })),
+                    error: "Used paragraph fallback parsing"
+                  };
+                }
               }
             }
           }
+        } else {
+          console.error("Empty or undefined outputText from AI response", response);
         }
       } catch (parseError) {
         console.error("Error parsing dialogue output:", parseError);
@@ -217,36 +298,19 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
         };
       }
 
-      // Handle empty output with better fallbacks
+      // Improved fallback logic for empty output
       if (!output.dialogue || output.dialogue.length === 0) {
         console.warn("Reading dialogue generation returned empty or invalid output");
         
-        // Create context-aware fallback responses
-        let fallbackMessage = `I'm contemplating the concept of ${input.nodeTitle}. `;
+        // Try our robust test dialogue generator for guaranteed output
+        const testDialogue = generateTestDialogue(input, personalitiesDetails);
         
-        if (isUserQuestion) {
-          const userQuestion = previousDialogueWithNames[previousDialogueWithNames.length - 1].message;
-          fallbackMessage += `Regarding your question about ${userQuestion.replace(/\?/g, '')}, this relates to ${input.nodeShortDefinition}. What else would you like to know?`;
-        } else {
-          // Create different fallbacks based on the node content
-          const keywords = input.nodeClarification.split(' ')
-            .filter(word => word.length > 5)
-            .slice(0, 3);
-          
-          if (keywords.length > 0) {
-            fallbackMessage += `This concept involves ${keywords.join(', ')}. What aspects are you most curious about?`;
-          } else {
-            fallbackMessage += `What aspects of ${input.nodeTitle} are you most curious about?`;
-          }
+        // Only add error information if test dialogue has error
+        if (testDialogue.error) {
+          testDialogue.error = "AI dialogue generation failed. " + testDialogue.error;
         }
         
-        return { 
-          dialogue: [{ 
-            characterId: personalitiesDetails[0].id, 
-            message: fallbackMessage
-          }], 
-          error: "AI couldn't generate proper dialogue. Falling back to simple response." 
-        };
+        return testDialogue;
       }
       
       // Enhance the dialogue with specific references if they're missing
@@ -269,6 +333,144 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
     }
   }
 );
+
+/**
+ * Generate fallback/test dialogue for development and troubleshooting
+ * This function can be used when the actual AI dialogue generation fails
+ * or during development/testing
+ */
+function generateTestDialogue(input: GenerateReadingDialogueInput, personalities: Character[]): GenerateReadingDialogueOutput {
+  if (!personalities || personalities.length === 0) {
+    return {
+      dialogue: [{
+        characterId: "neuros",
+        message: `Let's discuss ${input.nodeTitle}. This concept relates to ${input.nodeShortDefinition}.`
+      }],
+      error: "Using fallback dialogue - API connection issue"
+    };
+  }
+
+  // Simple dialogue generation for 1-2 personalities
+  const character1 = personalities[0];
+  const responses = [];
+  
+  // Extract key terms or phrases from node content for more relevant responses
+  const keyPhrases = extractKeyPhrases(input.nodeClarification, 3);
+  const randomPhrase = keyPhrases[Math.floor(Math.random() * keyPhrases.length)];
+  
+  // First character response
+  let message1 = "";
+  if (character1.alignment === 'law') {
+    message1 = `Let's analyze ${input.nodeTitle} systematically. The core concept is ${input.nodeShortDefinition}. ${randomPhrase} is particularly important to understand in this context.`;
+  } else if (character1.alignment === 'chaos') {
+    message1 = `I find ${input.nodeTitle} fascinating because it challenges conventional thinking. Beyond the basic definition, ${input.nodeShortDefinition}, ${randomPhrase} opens up creative possibilities.`;
+  } else {
+    message1 = `When considering ${input.nodeTitle}, which is ${input.nodeShortDefinition}, I think about how ${randomPhrase} applies in real-world scenarios. What's your take on this?`;
+  }
+  
+  responses.push({
+    characterId: character1.id,
+    message: message1
+  });
+  
+  // Second character response (if available)
+  if (personalities.length > 1) {
+    const character2 = personalities[1];
+    let message2 = "";
+    
+    // Get a different key phrase for the second character
+    const differentPhrase = keyPhrases.find(p => p !== randomPhrase) || randomPhrase;
+    
+    // Make the second character disagree or extend the first character's point
+    if (character2.type === 'antagonist') {
+      message2 = `I need to challenge ${character1.name}'s perspective. When we talk about ${input.nodeTitle}, many oversimplify. ${differentPhrase} is actually more complex than it appears at first.`;
+    } else if (character2.alignment !== character1.alignment) {
+      message2 = `I see this differently than ${character1.name}. While ${input.nodeTitle} is indeed ${input.nodeShortDefinition}, I would emphasize ${differentPhrase} as the most crucial aspect to understand.`;
+    } else {
+      message2 = `Building on what ${character1.name} said, I'd add that ${differentPhrase} also connects to ${input.domainTitle} in interesting ways. What specific aspects are you most curious about?`;
+    }
+    
+    responses.push({
+      characterId: character2.id,
+      message: message2
+    });
+  }
+  
+  // Check if there was a user question and provide a direct answer if possible
+  const previousDialogue = input.previousDialogue || [];
+  const lastMessage = previousDialogue.length > 0 ? previousDialogue[previousDialogue.length - 1] : null;
+  
+  if (lastMessage && lastMessage.characterId === 'user_sovereign') {
+    const userQuestion = lastMessage.message;
+    if (userQuestion.includes('?') || 
+        userQuestion.toLowerCase().includes('what') || 
+        userQuestion.toLowerCase().includes('how') || 
+        userQuestion.toLowerCase().includes('why')) {
+      
+      // Add a direct response to the user question
+      const respondingCharacter = personalities[responses.length % personalities.length];
+      let answer = `That's a good question about ${input.nodeTitle}. Based on the concept, ${extractSentenceWithKeywords(input.nodeClarification, userQuestion)}`;
+      
+      responses.push({
+        characterId: respondingCharacter.id,
+        message: answer
+      });
+    }
+  }
+  
+  return {
+    dialogue: responses,
+    error: "Using fallback dialogue (API connection issue)"
+  };
+}
+
+/**
+ * Helper function to extract key phrases from text
+ */
+function extractKeyPhrases(text: string, count: number): string[] {
+  // Simple implementation - extract sentences and pick a few based on length
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
+  
+  if (sentences.length === 0) {
+    return ["this concept", "this principle", "this important idea"];
+  }
+  
+  // Sort by length and pick medium-length sentences (not too short, not too long)
+  const sortedSentences = [...sentences].sort((a, b) => a.length - b.length);
+  const midIndex = Math.floor(sortedSentences.length / 2);
+  const startIndex = Math.max(0, midIndex - Math.floor(count / 2));
+  
+  // Take a few sentences from the middle of the sorted list
+  return sortedSentences.slice(startIndex, startIndex + count)
+    .map(s => s.trim())
+    // If still too long, take just the beginning
+    .map(s => s.length > 120 ? s.substring(0, 120) + "..." : s);
+}
+
+/**
+ * Extract a sentence from text that contains keywords from a query
+ */
+function extractSentenceWithKeywords(text: string, query: string): string {
+  // Get keywords from the query (words longer than 3 chars)
+  const keywords = query.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+  
+  // Split text into sentences
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 0);
+  
+  // Find sentences containing keywords
+  const matchedSentences = sentences.filter(sentence => {
+    const lowerSentence = sentence.toLowerCase();
+    return keywords.some(keyword => lowerSentence.includes(keyword));
+  });
+  
+  if (matchedSentences.length > 0) {
+    // Return the first matching sentence
+    return matchedSentences[0];
+  }
+  
+  // Fallback - return the first sentence or a generic response
+  return sentences.length > 0 ? sentences[0] : "we need to understand the concept thoroughly first.";
+}
 
 
     

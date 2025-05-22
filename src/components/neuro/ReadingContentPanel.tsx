@@ -21,6 +21,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { MultiPersonaChatPanel } from './MultiPersonaChatPanel';
 import type { Character } from '@/types/characterTypes';
 import type { GenerateReadingDialogueOutput } from '@/ai/flows/types/generateReadingDialogueTypes';
+import { generateDialogueDirectly } from '@/utils/dialogue-utils';
 
 
 interface ReadingContentPanelProps {
@@ -242,7 +243,16 @@ export function ReadingContentPanel({
                     currentDomain={currentDomain}
                     allAiCharacters={allAiCharacters}
                     guideCharacter={guideCharacter}
-                    generateNodeDialogue={generateNodeDialogue}
+                    generateNodeDialogue={async (node, module, domain, personalities, prevDialogue) => {
+                        try {
+                            // Try the direct approach first
+                            return await generateDialogueDirectly(node, module, domain, personalities, prevDialogue);
+                        } catch (error) {
+                            console.error("Direct dialogue failed, using fallback:", error);
+                            // Fall back to regular method
+                            return await generateNodeDialogue(node, module, domain, personalities, prevDialogue);
+                        }
+                    }}
                     isLoadingDialogue={isLoadingDialogue}
                 />
             </div>
