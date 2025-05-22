@@ -378,62 +378,62 @@ export default function Home() {
                             <Button 
                                 variant="default" 
                                 onClick={() => setCurrentInteraction('status_viewing')} 
-                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20 text-white"
                             >
                                 <Activity size={16} className="mr-spacing-sm flex-shrink-0 text-neutral-accent-color" />
                                 <div>
-                                    <span className="font-semibold">Profile & Progress</span>
-                                    <p className="text-xs opacity-80 mt-0.5">View your detailed profile and learning progress</p>
+                                    <span className="font-semibold text-white text-glow-cyan">Profile & Progress</span>
+                                    <p className="text-xs text-white/80 mt-0.5">View your detailed profile and learning progress</p>
                                 </div>
                             </Button>
                             
                             <Button 
                                 variant="default" 
                                 onClick={() => setCurrentInteraction('reviewing')} 
-                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20 text-white"
                                 disabled={!hasStandardReviewNodes && !hasManualReviewNodes}
                             >
                                 <BookCheck size={16} className="mr-spacing-sm flex-shrink-0 text-law-accent-color" />
                                 <div>
-                                    <span className="font-semibold">Knowledge Review</span>
-                                    <p className="text-xs opacity-80 mt-0.5">Strengthen memories with spaced repetition</p>
+                                    <span className="font-semibold text-white text-glow-gold">Knowledge Review</span>
+                                    <p className="text-xs text-white/80 mt-0.5">Strengthen memories with spaced repetition</p>
                                 </div>
                             </Button>
                             
                             <Button 
                                 variant="default" 
                                 onClick={() => setCurrentInteraction('chronicle')} 
-                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20 text-white"
                                 disabled={!hasAnyInstalledModules}
                             >
                                 <Swords size={16} className="mr-spacing-sm flex-shrink-0 text-chaos-accent-color" />
                                 <div>
-                                    <span className="font-semibold">Neuroverse Adventures</span>
-                                    <p className="text-xs opacity-80 mt-0.5">Test your knowledge in interactive scenarios</p>
+                                    <span className="font-semibold text-white text-glow-red">Neuroverse Adventures</span>
+                                    <p className="text-xs text-white/80 mt-0.5">Test your knowledge in interactive scenarios</p>
                                 </div>
                             </Button>
                             
                             <Button 
                                 variant="default" 
                                 onClick={() => setCurrentInteraction('diagnosing')} 
-                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20 text-white"
                             >
                                 <TestTube size={16} className="mr-spacing-sm flex-shrink-0 text-primary" />
                                 <div>
-                                    <span className="font-semibold">Diagnostics</span>
-                                    <p className="text-xs opacity-80 mt-0.5">Analyze your cognitive patterns</p>
+                                    <span className="font-semibold text-white text-glow-purple">Diagnostics</span>
+                                    <p className="text-xs text-white/80 mt-0.5">Analyze your cognitive patterns</p>
                                 </div>
                             </Button>
                             
                             <Button 
                                 variant="default" 
                                 onClick={() => setCurrentInteraction('admin')} 
-                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20"
+                                className="w-full justify-start text-left font-medium text-sm py-2.5 px-3 whitespace-normal h-auto bg-neutral-surface-color hover:bg-neutral-primary-color/20 text-white"
                             >
                                 <Settings size={16} className="mr-spacing-sm flex-shrink-0 text-neutral-accent-color" />
                                 <div>
-                                    <span className="font-semibold">System Admin</span>
-                                    <p className="text-xs opacity-80 mt-0.5">Manage modules and system settings</p>
+                                    <span className="font-semibold text-white text-glow-cyan">System Admin</span>
+                                    <p className="text-xs text-white/80 mt-0.5">Manage modules and system settings</p>
                                 </div>
                             </Button>
                         </CardContent>

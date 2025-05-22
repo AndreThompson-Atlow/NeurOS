@@ -526,31 +526,6 @@ export function NodeDisplay({
             <p className="neuro-text-body text-sm opacity-90 mb-spacing-md">{node.shortDefinition}</p>
           )}
           
-          <Accordion type="single" collapsible className="w-full">
-            <AccordionItem value="content" className="border-b-0">
-              <AccordionTrigger className="py-spacing-xs text-sm">
-                <span className="flex items-center">
-                  <FileTextIcon size={16} className="mr-spacing-xs opacity-70" />
-                  Node Content
-                </span>
-              </AccordionTrigger>
-              <AccordionContent>
-                <div className="prose prose-invert max-w-none prose-sm prose-headings:font-semibold prose-headings:mt-spacing-md prose-headings:mb-spacing-xs prose-p:my-spacing-sm prose-li:my-0.5 border-l border-border/50 pl-spacing-md">
-                  {node.content && (
-                    <div dangerouslySetInnerHTML={{ __html: node.content }} />
-                  )}
-                  
-                  {!node.content && (
-                    <>
-                      <h3>Learning Objective</h3>
-                      <p>{node.learningObjective}</p>
-                    </>
-                  )}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-          
           {showEPIC && (
             <Card className="neuro-card mt-spacing-md">
               <CardHeader className="pb-spacing-sm">
@@ -658,15 +633,6 @@ export function NodeDisplay({
                 </div>
               </CardContent>
             </Card>
-
-            <Card className="neuro-card shadow-sm" data-alignment="neutral">
-              <CardHeader className="p-spacing-md pb-spacing-xs">
-                <CardTitle className="text-sm font-medium">Learning Objective</CardTitle>
-              </CardHeader>
-              <CardContent className="p-spacing-md pt-spacing-xs">
-                <p className="text-xs opacity-90">{node.learningObjective}</p>
-              </CardContent>
-            </Card>
           </div>
         )}
         
@@ -689,7 +655,7 @@ export function NodeDisplay({
         {phase === 'install' && renderInstallPhase()}
       </div>
       
-      {phase === 'download' && node.keyTerms?.length > 0 && (
+      {phase === 'download' && (
         <div className="neuro-sidebar">
           <div className="space-y-spacing-md">
             {node.keyTerms && node.keyTerms.length > 0 && (
@@ -765,6 +731,21 @@ export function NodeDisplay({
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
+      )}
+      
+      {phase === 'install' && (
+        <div className="neuro-sidebar">
+          <div className="space-y-spacing-md">
+            <Card className="neuro-card shadow-sm" data-alignment="neutral">
+              <CardHeader className="p-spacing-md pb-spacing-xs">
+                <CardTitle className="text-sm font-medium">Learning Objective</CardTitle>
+              </CardHeader>
+              <CardContent className="p-spacing-md pt-spacing-xs">
+                <p className="text-xs opacity-90">{node.learningObjective}</p>
+              </CardContent>
+            </Card>
           </div>
         </div>
       )}
