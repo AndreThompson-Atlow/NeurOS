@@ -148,6 +148,7 @@ export function ReadingContentPanel({
       className={cn(
         "w-full flex flex-col flex-grow border-t-0 bg-transparent shadow-none p-0 overflow-hidden h-full neuro-fade-in"
       )} 
+      data-hover="false"
     > 
       <CardHeader className="pb-spacing-xs pt-spacing-sm px-spacing-md mb-spacing-sm flex-shrink-0 border-b border-border/20"> 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-spacing-xs mb-spacing-sm">  
@@ -191,28 +192,18 @@ export function ReadingContentPanel({
         <ScrollArea viewportRef={scrollViewportRef} className="h-full px-spacing-md scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"> 
           <div className="space-y-spacing-lg pb-spacing-lg pt-spacing-sm"> 
             
-            <div className="text-sm text-muted-foreground pb-spacing-sm border-b border-border/20 mb-spacing-md flex-shrink-0">
-             Domain: {currentDomain.title} ({currentDomainIndex + 1}/{module.domains.length}) - Node: {currentNode.title} ({currentNodeIndex + 1}/{currentDomain.nodes.length})
-           </div>
-            
-            <div className="flex flex-wrap gap-spacing-xs items-center my-spacing-sm">  
-              <Badge variant={currentNode.nodeType === 'concept' ? 'default' : currentNode.nodeType === 'principle' ? 'secondary' : 'outline'} className={cn("capitalize text-xs px-3 py-1 bg-opacity-70", alignmentProps.buttonClass)}> 
-                {currentNode.nodeType}
-              </Badge>
-            </div>
+            <section className="neuro-section"> 
+              <h3 className={cn(`neuro-section-title ${alignmentProps.titleColor}`)}>Short Definition</h3> 
+              <p className="neuro-text-body">{currentNode.shortDefinition}</p> 
+            </section>
+
+            <Separator className={cn(`my-spacing-md ${alignmentProps.borderColorClass} bg-opacity-30`)} />  
             
             <section className="neuro-section"> 
               <h3 className={cn(`neuro-section-title ${alignmentProps.titleColor}`)}>Learning Objective</h3> 
               <p className="neuro-text-body">{currentNode.learningObjective}</p> 
             </section>
             
-            <Separator className={cn(`my-spacing-md ${alignmentProps.borderColorClass} bg-opacity-30`)} />  
-            
-            <section className="neuro-section"> 
-              <h3 className={cn(`neuro-section-title ${alignmentProps.titleColor}`)}>Short Definition</h3> 
-              <p className="neuro-text-body">{currentNode.shortDefinition}</p> 
-            </section>
-
             <Separator className={cn(`my-spacing-md ${alignmentProps.borderColorClass} bg-opacity-30`)} />  
             
             <section className="neuro-section"> 

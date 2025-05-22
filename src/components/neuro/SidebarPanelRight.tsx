@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -20,10 +19,19 @@ interface SidebarPanelRightProps {
   alignmentProps: AlignmentStyling;
   currentNodeTitle: string;
   currentDomainTitle: string; 
-  moduleTitle: string; 
+  moduleTitle: string;
+  moduleDescription: string;
 }
 
-export function SidebarPanelRight({ keyTerms, moduleTags, alignmentProps, currentNodeTitle, currentDomainTitle, moduleTitle }: SidebarPanelRightProps) {
+export function SidebarPanelRight({ 
+  keyTerms, 
+  moduleTags, 
+  alignmentProps, 
+  currentNodeTitle, 
+  currentDomainTitle, 
+  moduleTitle, 
+  moduleDescription 
+}: SidebarPanelRightProps) {
   const isMobile = useIsMobile(); 
   const [activeTermDefinition, setActiveTermDefinition] = useState<{ term: string, definition: string, type: 'keyTerm' | 'moduleTag' } | null>(null);
 
@@ -40,12 +48,18 @@ export function SidebarPanelRight({ keyTerms, moduleTags, alignmentProps, curren
         `p-spacing-md border-r-4 ${alignmentProps.borderColorClass} bg-card/95 flex flex-col h-full shadow-cyan-sm overflow-hidden`
       )}
       data-alignment={alignmentProps.dataAlignment}
+      data-hover="false"
     >
       <CardHeader className="pb-spacing-sm pt-0 px-0 mb-spacing-sm flex-shrink-0"> 
         <CardTitle className={`text-xl font-display ${alignmentProps.titleColor} mb-spacing-xs`}>Context</CardTitle>
         <p className="text-xs text-muted-foreground truncate" title={moduleTitle}>Module: {moduleTitle}</p>
         <p className="text-xs text-muted-foreground truncate" title={currentDomainTitle}>Domain: {currentDomainTitle}</p>
         <p className="text-xs text-muted-foreground truncate" title={currentNodeTitle}>Node: {currentNodeTitle}</p>
+        {moduleDescription && (
+          <div className="mt-spacing-sm p-spacing-sm text-xs bg-muted/30 rounded-md border border-border/20">
+            <p className="text-muted-foreground/90 leading-relaxed">{moduleDescription}</p>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pt-0 px-0 flex-grow overflow-hidden"> 
         <ScrollArea className="h-full w-full scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">

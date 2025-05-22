@@ -103,6 +103,7 @@ export function ReadingModeDisplay({
         "neuro-main-content min-w-0 flex flex-col overflow-hidden rounded-lg shadow-md neuro-card",
         "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]" 
         )}
+        data-hover="false"
       > 
         <ReadingContentPanel
           module={module}
@@ -142,22 +143,24 @@ export function ReadingModeDisplay({
         </CardFooter>
       </div>
 
-       <div className={cn(
-         "neuro-sidebar flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-sm neuro-card",
-         "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]", 
-         alignmentProps.borderColorClass, "border-r-4"
-         )}
-         data-alignment={alignmentProps.dataAlignment}
-        >  
-        <SidebarPanelRight
-          keyTerms={currentNode.keyTerms}
-          moduleTags={module.tags || []}
-          alignmentProps={alignmentProps}
-          currentNodeTitle={currentNode.title}
-          currentDomainTitle={currentDomain.title}
-          moduleTitle={module.title}
-        />
-      </div>
+      {((currentNode.keyTerms?.length ?? 0) > 0 || (module.tags?.length ?? 0) > 0) && (
+        <div className={cn(
+          "neuro-sidebar flex-shrink-0 flex flex-col overflow-hidden rounded-lg shadow-sm neuro-card",
+          "lg:max-h-[calc(100vh-var(--spacing-lg)*2)]"
+          )}
+          data-hover="false"
+        >
+          <SidebarPanelRight
+            keyTerms={currentNode.keyTerms || []}
+            moduleTags={module.tags || []}
+            alignmentProps={alignmentProps}
+            currentNodeTitle={currentNode.title}
+            currentDomainTitle={currentDomain.title}
+            moduleTitle={module.title}
+            moduleDescription={module.description}
+          />
+        </div>
+      )}
     </div>
   );
 }

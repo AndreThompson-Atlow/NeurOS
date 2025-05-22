@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { Module, Domain, Node as NeuroNode } from '@/types/neuro';
@@ -102,14 +101,24 @@ export function SidebarPanelLeft({
             <FileTextIcon size={18} className="inline-block mr-spacing-xs flex-shrink-0" />
             <span className="truncate">Node: {currentNode.title}</span>
           </h3>
-          <Badge variant="outline" className={cn(
-            `mt-spacing-xs text-xs capitalize px-2 py-0.5`, 
-            alignmentProps.borderColorClass, 
-            alignmentProps.titleColor, 
-            `${alignmentProps.buttonClass ? alignmentProps.buttonClass.split(' ')[0] : 'bg-muted'}/20`
-            )}>
-            Status: {currentNode.status.replace('_', ' ')}
-          </Badge>
+          <div className="flex flex-wrap gap-spacing-xs items-center">
+            <Badge variant="outline" className={cn(
+              `mt-spacing-xs text-xs capitalize px-2 py-0.5`, 
+              alignmentProps.borderColorClass, 
+              alignmentProps.titleColor, 
+              `${alignmentProps.buttonClass ? alignmentProps.buttonClass.split(' ')[0] : 'bg-muted'}/20`
+              )}>
+              Type: {currentNode.nodeType}
+            </Badge>
+            <Badge variant="outline" className={cn(
+              `mt-spacing-xs text-xs capitalize px-2 py-0.5`, 
+              alignmentProps.borderColorClass, 
+              alignmentProps.titleColor, 
+              `${alignmentProps.buttonClass ? alignmentProps.buttonClass.split(' ')[0] : 'bg-muted'}/20`
+              )}>
+              Status: {currentNode.status.replace('_', ' ')}
+            </Badge>
+          </div>
         </div>
 
         {(currentDomain.characterAffinities?.length > 0 || currentDomain.specterAffinities?.length > 0) && (
