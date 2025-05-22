@@ -539,14 +539,9 @@ export default function Home() {
           </div>
         );
       case 'reviewing':
-        console.log("Rendering review content with activeReviewSession:", activeReviewSession);
         return (
             <div className="neuro-container neuro-fade-in py-spacing-lg">
-                {activeReviewSession ? (
-                    <ReviewScreen onExit={() => setCurrentInteraction('initial')} />
-                ) : (
-                    <ReviewDashboard onExit={() => setCurrentInteraction('initial')} />
-                )}
+                <ReviewScreen onExit={() => setCurrentInteraction('initial')} />
             </div>
         );
       case 'diagnosing':

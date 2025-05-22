@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Module, Node, ReviewSessionNode, EpicStep } from '@/types/neuro';
 import { ReviewScreen } from '@/components/neuro/ReviewScreen';
+import { useToast } from '@/hooks/use-toast';
 
 interface ReviewDashboardProps {
   onExit: () => void;
@@ -49,6 +50,8 @@ export function ReviewDashboard({ onExit }: ReviewDashboardProps) {
   const [moduleFilter, setModuleFilter] = useState<string | null>(null);
   const [forceUpdate, setForceUpdate] = useState(false);
   
+  const { toast } = useToast();
+  
   // Get scheduled reviews using our spaced repetition design
   const scheduledReviews = useGetScheduledReviews(viewMode, moduleFilter);
   const moduleOptions = Object.values(userModules)
@@ -60,19 +63,23 @@ export function ReviewDashboard({ onExit }: ReviewDashboardProps) {
     console.log("Starting standard review session");
     if (hasStandardReviewNodes) {
       startReviewSession();
+      // No need for navigation here - page.tsx will handle it based on activeReviewSession
     } else {
       console.log("No standard review nodes available");
+      toast?.({ description: "No nodes currently need review." });
     }
-  }, [startReviewSession, hasStandardReviewNodes]);
+  }, [startReviewSession, hasStandardReviewNodes, toast]);
   
   const handleStartManualReview = useCallback(() => {
     console.log("Starting manual review session");
     if (hasManualReviewNodes) {
       startManualReviewSession();
+      // No need for navigation here - page.tsx will handle it based on activeReviewSession
     } else {
       console.log("No manual review nodes available");
+      toast?.({ description: "No installed nodes available for manual review." });
     }
-  }, [startManualReviewSession, hasManualReviewNodes]);
+  }, [startManualReviewSession, hasManualReviewNodes, toast]);
   
   // If there's an active review session, page.tsx will handle showing the review screen
   // instead of trying to render it from here
