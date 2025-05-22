@@ -58,13 +58,21 @@ export function ReviewDashboard({ onExit }: ReviewDashboardProps) {
   // Handle starting review sessions
   const handleStartStandardReview = useCallback(() => {
     console.log("Starting standard review session");
-    startReviewSession();
-  }, [startReviewSession]);
+    if (hasStandardReviewNodes) {
+      startReviewSession();
+    } else {
+      console.log("No standard review nodes available");
+    }
+  }, [startReviewSession, hasStandardReviewNodes]);
   
   const handleStartManualReview = useCallback(() => {
     console.log("Starting manual review session");
-    startManualReviewSession();
-  }, [startManualReviewSession]);
+    if (hasManualReviewNodes) {
+      startManualReviewSession();
+    } else {
+      console.log("No manual review nodes available");
+    }
+  }, [startManualReviewSession, hasManualReviewNodes]);
   
   // If there's an active review session, page.tsx will handle showing the review screen
   // instead of trying to render it from here

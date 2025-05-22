@@ -114,65 +114,59 @@ export function NodeDisplay({
   const isNodeFamiliar = useMemo(() => node?.familiar || node?.status === 'familiar' || node?.status === 'understood', [node]);
   const isNodeUnderstood = useMemo(() => node?.understood || node?.status === 'understood', [node]);
 
+  // Separate useEffect for initializing the attention check on node change
   useEffect(() => {
-    const nodeChanged = node?.id !== prevNodeId.current;
-    prevNodeId.current = node?.id;
-
-    // Reset states when node changes
-    if (nodeChanged) {
-        if (!evaluationResult) { 
-          clearEvaluationResultCallback();
-        }
-        setActiveTermDefinition(null);
-        setRecallInput('');
-        setEpicInput('');
+    if (node && prevNodeId.current !== node.id) {
+      prevNodeId.current = node.id;
+      
+      // Reset all states on node change
+      setActiveTermDefinition(null);
+      setRecallInput('');
+      setEpicInput('');
+      
+      // Only set showAttentionCheck to true for download phase on new nodes
+      const isDownloadPhase = phase === 'download';
+      const isNewNode = node.status === 'new';
+      const isReviewing = currentInteraction === 'reviewing';
+      
+      if (isDownloadPhase && isNewNode && !isReviewing) {
         setShowAttentionCheck(true);
-        setShowRecall(false);
-        setHideContentForRecall(false);
+      } else {
+        setShowAttentionCheck(false);
+      }
+      
+      setShowRecall(false);
+      setHideContentForRecall(false);
+      
+      if (evaluationResult) {
+        clearEvaluationResultCallback();
+      }
     }
-  }, [node?.id, evaluationResult, clearEvaluationResultCallback]);
+  }, [node, phase, currentInteraction, evaluationResult, clearEvaluationResultCallback]);
 
+  // Separate useEffect for handling state changes based on interaction changes
   useEffect(() => {
-    if (!node) {
-        return;
+    if (!node) return;
+    
+    // These state updates happen in response to interaction changes, not during render
+    if (currentInteraction === 'reviewing') {
+      setShowAttentionCheck(false);
+      setShowRecall(false);
+      setHideContentForRecall(false);
     }
+  }, [currentInteraction, node]);
 
-    const currentNodeFamiliar = node.familiar || node.status === 'familiar' || node.status === 'understood';
-    const currentNodeUnderstood = node.understood || node.status === 'understood'; 
-    const isNodeNewAndNotReviewed = !currentNodeFamiliar && node.status === 'new' && currentInteraction !== 'reviewing';
-
-    // Only update these states if we're not in the middle of a node transition
-    // This prevents triggering state updates during render
-    if (prevNodeId.current === node.id) {
-        if (currentInteraction === 'reviewing') {
-            setShowAttentionCheck(false);
-            setShowRecall(false); 
-            setHideContentForRecall(false); 
-        } else if (phase === 'download' && isNodeNewAndNotReviewed) {
-            if (evaluationResult && !evaluationResult.isPass && showRecall) {
-                setShowAttentionCheck(false);
-                setHideContentForRecall(true);
-            } else if (showRecall && (!evaluationResult || !evaluationResult.isPass)) { 
-                setShowAttentionCheck(false);
-                setHideContentForRecall(true); 
-            } else if (evaluationResult && evaluationResult.isPass && showRecall) { 
-                setShowAttentionCheck(false);
-                setShowRecall(true); 
-                setHideContentForRecall(false); 
-            } 
-            // Don't override showAttentionCheck here, let the node change effect handle it
-        } else if (phase === 'install' && (currentInteraction === 'learning' && (node.status === 'familiar' || node.status === 'downloaded') || (node.status === 'installing' && !currentNodeUnderstood))) {
-            setShowAttentionCheck(false);
-            setShowRecall(false);
-            setHideContentForRecall(false);
-        } else { 
-            setShowAttentionCheck(false);
-            setShowRecall(false);
-            setHideContentForRecall(false);
-        }
+  // Separate useEffect for handling evaluation result changes
+  useEffect(() => {
+    if (!node || !evaluationResult) return;
+    
+    if (phase === 'download' && showRecall) {
+      if (evaluationResult.isPass) {
+        setHideContentForRecall(false);
+      }
     }
-  }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, showRecall, isNodeUnderstood]);
-  
+  }, [evaluationResult, node, phase, showRecall]);
+
   // Separate effect for probe fetching to avoid nested state updates during render
   useEffect(() => {
     if (node && phase === 'install' && currentInteraction === 'learning' && 
