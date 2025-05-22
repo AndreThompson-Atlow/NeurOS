@@ -24,10 +24,10 @@ const getStatusProps = (status: ModuleStatus | undefined) => {
     switch (status) {
         case 'new': return { text: 'Available', icon: <Search size={14} />, badgeVariant: "outline" as const, badgeClass: "bg-status-new-bg text-status-new border-status-new" };
         case 'in_library': return { text: 'In Library', icon: <Library size={14} />, badgeVariant: "secondary" as const, badgeClass: "bg-status-familiar-bg text-status-familiar border-status-familiar" };
-        case 'downloading': return { text: 'Downloading...', icon: <Download size={14} className="animate-pulse"/>, badgeVariant: "default" as const, badgeClass: "bg-law-surface-color text-law-accent-color border-law-border-color" };
-        case 'downloaded': return { text: 'Ready to Install', icon: <BrainCircuit size={14} />, badgeVariant: "default" as const, badgeClass: "bg-law-surface-color text-law-accent-color border-law-border-color" };
-        case 'installing': return { text: 'Installing...', icon: <BrainCircuit size={14} className="animate-pulse"/>, badgeVariant: "default" as const, badgeClass: "bg-chaos-surface-color text-chaos-primary-color border-chaos-border-color" };
-        case 'installed': return { text: 'Installed', icon: <Check size={14} />, badgeVariant: "default" as const, badgeClass: "bg-status-understood-bg text-status-understood border-status-understood" };
+        case 'downloading': return { text: 'Learning', icon: <BookOpen size={14} className="animate-pulse"/>, badgeVariant: "default" as const, badgeClass: "bg-law-surface-color text-law-accent-color border-law-border-color" };
+        case 'downloaded': return { text: 'Ready', icon: <BookOpen size={14} />, badgeVariant: "default" as const, badgeClass: "bg-law-surface-color text-law-accent-color border-law-border-color" };
+        case 'installing': return { text: 'Learning', icon: <BookOpen size={14} className="animate-pulse"/>, badgeVariant: "default" as const, badgeClass: "bg-chaos-surface-color text-chaos-primary-color border-chaos-border-color" };
+        case 'installed': return { text: 'Completed', icon: <Check size={14} />, badgeVariant: "default" as const, badgeClass: "bg-status-understood-bg text-status-understood border-status-understood" };
         default: return { text: 'Unknown', icon: null, badgeVariant: "outline" as const, badgeClass: "bg-muted text-muted-foreground border-border" };
     }
 }
@@ -69,17 +69,17 @@ export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrar
     let actionButton = null;
     
     if (canStartDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><Download className="mr-spacing-xs" /> Start Download</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BookOpen className="mr-spacing-xs" /> Learn This Module</Button>;
     } else if (canContinueDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><Download className="mr-spacing-xs animate-pulse" /> Continue Download</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BookOpen className="mr-spacing-xs animate-pulse" /> Continue Learning</Button>;
     } else if (canStartInstall) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BrainCircuit className="mr-spacing-xs" /> Start Install</Button>;
+        actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BookOpen className="mr-spacing-xs" /> Learn This Module</Button>;
     } else if (canContinueInstall) {
-         actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BrainCircuit className="mr-spacing-xs animate-pulse" /> Continue Install</Button>;
+         actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BookOpen className="mr-spacing-xs animate-pulse" /> Continue Learning</Button>;
     } else if (module.status === 'new') {
         actionButton = <Button variant="outline" size="sm" onClick={() => onAddModuleToLibrary(module.id)} className={`w-full border-${alignmentProps.dataAlignment}-border-color text-${alignmentProps.dataAlignment}-primary-color hover:bg-${alignmentProps.dataAlignment}-surface-color`}><PlusCircle className="mr-spacing-xs" /> Add to Library</Button>;
     } else if (module.status === 'installed') {
-        actionButton = <Button variant="default" size="sm" className={`w-full opacity-70 cursor-default ${alignmentProps.buttonClass} bg-opacity-70`} disabled><Check className="mr-spacing-xs" /> Installed</Button>;
+        actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={`w-full ${alignmentProps.buttonClass}`}><BookOpen className="mr-spacing-xs" /> Review This Module</Button>;
     }
 
     return (
@@ -98,18 +98,6 @@ export function ModuleSelector({ userModules, onStartModule, onAddModuleToLibrar
                   {statusProps.icon && React.cloneElement(statusProps.icon as React.ReactElement, { className: "mr-1"})}
                   {statusProps.text}
                 </Badge>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => onStartReadingMode(module.id)} aria-label={`Read module: ${module.title}`}>
-                        <BookOpen size={16} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="ui-tooltip-content">
-                      <p>Enter Reading Mode</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
            </div>
           <CardDescription className="min-h-[4.5rem] overflow-y-auto text-sm text-text-secondary-neuro leading-relaxed pr-spacing-xs scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">{module.description}</CardDescription> {/* Increased min-h */}

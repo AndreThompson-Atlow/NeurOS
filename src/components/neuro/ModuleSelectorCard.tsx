@@ -42,17 +42,17 @@ export function ModuleSelectorCard({ module, onStartModule, onAddModuleToLibrary
     let actionButton = null;
     
     if (canStartDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5" /> Learn This Module</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BookOpen className="mr-spacing-sm h-5 w-5" /> Learn This Module</Button>;
     } else if (canContinueDownload) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><Download className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Learning</Button>;
+        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BookOpen className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Learning</Button>;
     } else if (canStartInstall) {
-        actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5" /> Start Installing</Button>;
+        actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BookOpen className="mr-spacing-sm h-5 w-5" /> Learn This Module</Button>;
     } else if (canContinueInstall) {
-         actionButton = <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BrainCircuit className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Installing</Button>;
+         actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BookOpen className="mr-spacing-sm h-5 w-5 animate-pulse" /> Continue Learning</Button>;
     } else if (module.status === 'new') {
         actionButton = <Button variant="outline" onClick={() => onAddModuleToLibrary(module.id)} className={`w-full border-${alignmentProps.dataAlignment}-border-color text-${alignmentProps.dataAlignment}-primary-color hover:bg-${alignmentProps.dataAlignment}-surface-color py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><PlusCircle className="mr-spacing-sm h-5 w-5" /> Add to Library</Button>;
     } else if (module.status === 'installed') {
-        actionButton = <Button variant="default" className={`w-full opacity-70 cursor-default ${alignmentProps.buttonClass} bg-opacity-70 py-3 text-sm`} disabled><Check className="mr-spacing-sm h-5 w-5" /> Installed</Button>;
+        actionButton = <Button onClick={() => onStartReadingMode(module.id)} variant={alignmentProps.dataAlignment} className={`w-full ${alignmentProps.buttonClass} py-3 text-sm font-medium hover:scale-[1.02] hover:shadow-cyan-md`}><BookOpen className="mr-spacing-sm h-5 w-5" /> Review This Module</Button>;
     }
 
     return (
@@ -73,18 +73,6 @@ export function ModuleSelectorCard({ module, onStartModule, onAddModuleToLibrary
                   {statusProps.icon && React.cloneElement(statusProps.icon as React.ReactElement, { className: "mr-2 h-5 w-5"})}
                   {statusProps.text}
                 </Badge>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-primary" onClick={() => onStartReadingMode(module.id)} aria-label={`Read module: ${module.title}`}>
-                        <BookOpen size={20} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent className="ui-tooltip-content">
-                      <p>Enter Reading Mode</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
               </div>
            </div>
 

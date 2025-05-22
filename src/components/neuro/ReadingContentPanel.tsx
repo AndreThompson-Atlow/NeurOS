@@ -175,7 +175,7 @@ export function ReadingContentPanel({
           </Button>
           {startButtonLabel && module.status !== 'installed' && (
             <Button onClick={() => onStartModule(module.id)} variant={alignmentProps.dataAlignment} size="sm" className={cn("neuro-button h-9 text-xs px-3 py-2", alignmentProps.buttonClass)}> 
-              {module.status === 'downloading' || module.status === 'installing' ? <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> : (module.status === 'downloaded' ? <Play className="mr-spacing-xs h-4 w-4"/> : <Download className="mr-spacing-xs h-4 w-4" />)} 
+              {module.status === 'downloading' || module.status === 'installing' ? <Loader2 className="mr-spacing-xs h-4 w-4 animate-spin" /> : <BookOpen className="mr-spacing-xs h-4 w-4" />} 
               {startButtonLabel}
             </Button>
           )}
