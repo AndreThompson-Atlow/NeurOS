@@ -163,11 +163,10 @@ export interface NodeDownload {
 
 export interface NodeEPIC {
   explainPrompt: string;
-  probePrompt: string;
+  probeQuestions?: [string, string, string]; // Temporarily optional during migration
   implementPrompt: string;
   connectPrompt: string;
   connectTo?: string[]; // Optional for now, as it was added later
-  probeQuestions?: string[]; // Array of predefined probe questions
   [key: string]: string | string[] | undefined; // Make it indexable by string keys
 }
 

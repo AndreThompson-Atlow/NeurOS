@@ -727,7 +727,7 @@ export function useLearningSession() {
     if(hasHydrated && isInitialLoadDoneRef.current){
         loadDungeons();
     }
-  }, [isChronicleSystemReady, hasHydrated]); 
+  }, [isChronicleSystemReady, hasHydrated]);
 
 
   const hasAnyInstalledModules = useMemo(() => { 
@@ -1222,10 +1222,38 @@ export function useLearningSession() {
     if (!currentNode || !currentActiveModule || isLoading) return;
     setIsLoading(true);
     
-    // First check if the node has predefined probe questions in its epic object
-    if (currentNode.epic && currentNode.epic.probeQuestions && Array.isArray(currentNode.epic.probeQuestions) && currentNode.epic.probeQuestions.length > 0) {
+    // First check if the node has the required 3 probe questions in its epic object
+    if (currentNode.epic && currentNode.epic.probeQuestions && Array.isArray(currentNode.epic.probeQuestions) && currentNode.epic.probeQuestions.length === 3) {
       console.log("Using predefined probe questions from the module");
       setProbeQuestions(currentNode.epic.probeQuestions);
+      setIsLoading(false);
+      return;
+    }
+    
+    // Check for legacy probePrompt (for backward compatibility during transition)
+    if (currentNode.epic && (currentNode.epic as any).probePrompt) {
+      console.log("Using legacy probe prompt from the module, converting to questions");
+      const prompt = (currentNode.epic as any).probePrompt;
+      
+      // Split by question marks to get individual questions, or use the prompt as is if it's already multiple questions
+      let questions = prompt.split('?').filter((q: string) => q.trim()).map((q: string) => q.trim() + '?');
+      
+      // If we only got one question or the split didn't work well, create variations
+      if (questions.length <= 1) {
+        questions = [
+          prompt,
+          `Can you provide a specific example related to ${currentNode.title}?`,
+          `What are the implications or consequences of ${currentNode.title}?`
+        ];
+      } else if (questions.length === 2) {
+        // Add a third question if we only have 2
+        questions.push(`How does ${currentNode.title} connect to other concepts in this domain?`);
+      } else if (questions.length > 3) {
+        // Take only the first 3 questions
+        questions = questions.slice(0, 3);
+      }
+      
+      setProbeQuestions(questions);
       setIsLoading(false);
       return;
     }
@@ -1235,13 +1263,29 @@ export function useLearningSession() {
     try {
       const contextContent = `Module: ${(currentActiveModule as Module).title}, Domain: ${currentDomain?.title}, Concept: ${currentNode.title}, Definition: ${currentNode.shortDefinition}, Clarification: ${currentNode.download.clarification}`;
       const result = await generateProbeQuestions({ concept: currentNode.title, moduleContent: contextContent, characterId });
-      setProbeQuestions(result.questions);
+      // Ensure we have exactly 3 questions
+      const generatedQuestions = result.questions.slice(0, 3);
+      while (generatedQuestions.length < 3) {
+        generatedQuestions.push(`Additional question about ${currentNode.title}?`);
+      }
+      setProbeQuestions(generatedQuestions);
     } catch (error) {
       console.error("Error generating probe questions:", error);
       queueToast({ title: "Error", description: "Could not generate probe questions.", variant: "destructive" });
       setProbeQuestions([]); 
     } finally { setIsLoading(false); }
   }, [currentNode, currentActiveModule, currentDomain, queueToast, isLoading, setIsLoading, setProbeQuestions]);
+
+  // Automatically fetch probe questions when EPIC step changes to 'probe'
+  useEffect(() => {
+    if (currentEpicStep === 'probe' && currentNode && currentActiveModule && activeSession?.currentPhase === 'install') {
+      // Only fetch if we don't already have probe questions
+      if (probeQuestions.length === 0) {
+        console.log("Auto-fetching probe questions for EPIC step change");
+        fetchProbeQuestionsInternalCallback();
+      }
+    }
+  }, [currentEpicStep, currentNode, currentActiveModule, activeSession?.currentPhase, probeQuestions.length, fetchProbeQuestionsInternalCallback]);
 
   const performFullEvaluationCallback = useCallback(async (
     userInputText: string,
@@ -1496,7 +1540,6 @@ export function useLearningSession() {
 
   const handleProceedAfterSuccessCallback = useCallback(() => {
     if (!activeSession || !currentActiveModule || !currentNode) return;
-    const currentModule = currentActiveModule as Module; 
 
     clearEvaluationResultCallback(); 
 
@@ -1508,28 +1551,23 @@ export function useLearningSession() {
             advanceProgressCallback();
         }
     } else if (activeSession.currentPhase === 'install') {
-        let nextStep = currentEpicStep;
-        let shouldAdvanceNode = false;
-
         const epicStepsOrder: EpicStep[] = ['explain', 'probe', 'implement', 'connect'];
         const currentStepIndex = epicStepsOrder.indexOf(currentEpicStep);
 
         if (currentStepIndex < epicStepsOrder.length - 1) {
-            nextStep = epicStepsOrder[currentStepIndex + 1];
-            if (nextStep === 'probe') fetchProbeQuestionsInternalCallback(); 
+            // Move to next EPIC step
+            const nextStep = epicStepsOrder[currentStepIndex + 1];
+            setCurrentEpicStep(nextStep);
+            if (nextStep === 'probe') {
+                fetchProbeQuestionsInternalCallback(); 
+            }
         } else { 
-            shouldAdvanceNode = true; 
-        }
-        
-        if (shouldAdvanceNode) {
+            // We're at the connect step, so advance to next node
             _markNodeUnderstoodInternalCallback(); 
             advanceProgressCallback(); 
-        } else {
-            setCurrentEpicStep(nextStep);
-            setProbeQuestions(nextStep === 'probe' ? probeQuestions : []); 
         }
     }
-  }, [activeSession, currentActiveModule, currentNode, currentEpicStep, advanceProgressCallback, fetchProbeQuestionsInternalCallback, clearEvaluationResultCallback, probeQuestions, _markNodeFamiliarInternalCallback, _markNodeUnderstoodInternalCallback, setCurrentEpicStep, setProbeQuestions]);
+  }, [activeSession, currentActiveModule, currentNode, currentEpicStep, advanceProgressCallback, fetchProbeQuestionsInternalCallback, clearEvaluationResultCallback, _markNodeFamiliarInternalCallback, _markNodeUnderstoodInternalCallback, setCurrentEpicStep]);
 
 
   const submitDiagnosticResponseCallback = useCallback(async (nodeForContext: Node, diagnosticPromptText: string, response: string, diagnosticLevel: AnalysisContext['interactionType'] = 'diagnostic', epicStep?: EpicStep) => {

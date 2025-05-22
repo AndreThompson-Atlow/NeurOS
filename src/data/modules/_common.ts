@@ -1,4 +1,3 @@
-
 import type { Module, Node, NodeStatus, NodeType, NodeDownload, NodeEPIC, Domain } from '@/types/neuro';
 
 // Define initial statuses used across modules
@@ -6,10 +5,14 @@ export const initialNodeStatus: NodeStatus = 'new';
 
 // Placeholder EPIC prompts - More specific and varied
 export const placeholderEPIC: NodeEPIC = {
-  explainPrompt: "Explain the core concept of this node in your own words. What is its fundamental purpose or definition? How would you describe it to someone unfamiliar with the topic, ensuring they grasp its essence?",
-  probePrompt: "What are the potential limitations, edge cases, or common misunderstandings related to this concept? Are there situations where applying it might be counterproductive or require careful nuance? What questions remain unanswered for you?",
-  implementPrompt: "Devise a practical, real-world scenario or a thought experiment where you actively apply this concept. Describe the situation, the steps you would take to implement the concept, and the expected outcome or insight gained. For example, if learning about 'Syllogisms', create one related to a current event. If learning about 'Network Effects', outline a basic strategy for a new social app to leverage them. If learning about 'Photosynthesis', describe an experiment to test a factor affecting its rate.",
-  connectPrompt: "How does this concept connect to other nodes within this module, or to broader concepts from other modules you've studied (e.g., Sovereign Core, Thinking, Communication)? Identify at least one specific connection and explain the nature of the relationship (e.g., causal, hierarchical, analogous, contradictory but reconcilable).",
+  explainPrompt: "Explain this concept in your own words.",
+  probeQuestions: [
+    "What are the key components of this concept?",
+    "How does this concept apply in real-world situations?",
+    "What are the potential challenges or limitations of this concept?"
+  ],
+  implementPrompt: "Describe how you would apply this concept in practice.",
+  connectPrompt: "How does this concept relate to other ideas you've learned?"
 };
 
 // Helper to ensure all node properties are present, providing defaults

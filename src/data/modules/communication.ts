@@ -48,10 +48,14 @@ export const communicationModuleData: Omit<Module, 'status'> = {
               recallPrompt: 'Explain how semantic precision differs from simply using correct vocabulary, and why connotation matters as much as denotation.'
             },
             epic: {
-              explainPrompt: "Explain semantic precision as it applies to effective communication. How do denotation, connotation, and context interact to create precise meaning?",
-              probePrompt: "What happens when semantic precision is lacking in professional, personal, or academic settings? Can excessive semantic precision become counterproductive?",
-              implementPrompt: "Choose a concept important to your field or interests. Write three different explanations using: 1) Technical/precise language for experts, 2) Clear but accessible language for educated non-specialists, 3) Simple language for children. Notice how semantic choices affect clarity and precision.",
-              connectPrompt: "How does semantic precision support the 'Non-Contradiction' principle from AXIOMOS by ensuring statements mean what they appear to mean?"
+              explainPrompt: "Explain semantic precision in communication. How does choosing precise words differ from simply using 'correct' vocabulary?",
+              probeQuestions: [
+                "How do denotation and connotation work together to create precise meaning in specific contexts?",
+                "What are some examples where slight word choice differences dramatically change the message's impact?",
+                "How can cultural or professional contexts affect what constitutes 'precise' word choice?"
+              ],
+              implementPrompt: "Choose a recent piece of communication (email, text, conversation). Rewrite three sentences with different word choices, noting how denotation, connotation, and context change the message's precision and impact.",
+              connectPrompt: "How does semantic precision support 'Logical Reasoning' by ensuring that the language carrying logical arguments accurately represents the intended logical relationships?"
             }
           },
           {
@@ -68,9 +72,13 @@ export const communicationModuleData: Omit<Module, 'status'> = {
               recallPrompt: 'How does syntactic mastery differ from basic grammatical correctness? Give an example of how sentence structure affects meaning or emphasis.'
             },
             epic: {
-              explainPrompt: "Explain syntactic mastery and how it enhances communication beyond grammatical correctness. What are some ways sentence structure can be manipulated for effect?",
-              probePrompt: "How do different languages offer different syntactic possibilities? What syntactic features of English help or hinder clear communication?",
-              implementPrompt: "Take a paragraph you've written recently. Rewrite it focusing on: 1) Varying sentence length, 2) Using parallel structure where appropriate, 3) Ensuring subordination clearly shows relationships between ideas. Note how these changes affect readability and emphasis.",
+              explainPrompt: "Explain syntactic mastery in communication. How does sentence structure affect meaning beyond just word choice?",
+              probeQuestions: [
+                "How can the same words arranged differently create completely different meanings or emphasis?",
+                "What syntactic patterns help create clarity versus confusion in complex ideas?",
+                "When might breaking conventional grammar rules actually improve communication?"
+              ],
+              implementPrompt: "Take a complex idea from your field. Write it using: 1) Simple sentences, 2) One complex sentence with multiple clauses, 3) A structure that emphasizes different aspects. Compare how structure affects clarity and impact.",
               connectPrompt: "How does syntactic mastery support 'Logical Reasoning' from Thinking by making the logical relationships between ideas clearer through sentence structure?"
             }
           },
@@ -89,7 +97,11 @@ export const communicationModuleData: Omit<Module, 'status'> = {
             },
             epic: {
               explainPrompt: "Explain pragmatic context in communication. How does the same utterance can have completely different meanings in different contexts?",
-              probePrompt: "What are the risks of misunderstanding pragmatic context in cross-cultural communication or professional settings? How can pragmatic competence be developed?",
+              probeQuestions: [
+                "What are some examples of indirect speech acts where the intended meaning differs from literal meaning?",
+                "How do cultural differences create pragmatic misunderstandings even when people share a language?",
+                "What strategies help navigate pragmatic context in unfamiliar social or professional environments?"
+              ],
               implementPrompt: "Analyze a recent conversation where subtext was important. Identify: 1) What was said literally, 2) What was pragmatically implied, 3) What contextual factors enabled this pragmatic interpretation, 4) How the same words might be interpreted differently in a different context.",
               connectPrompt: "How does pragmatic context relate to 'Contextual Understanding' from Chronology, extending the principle to linguistic rather than historical contexts?"
             }
