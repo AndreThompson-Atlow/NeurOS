@@ -70,10 +70,10 @@ export function ReadingModeDisplay({
   const getStartButtonLabel = (status: Module['status'] | undefined): string | null => {
     switch (status) {
       case "new":
-      case "in_library": return "Learn this module";
-      case "downloaded": return "Learn this module";
-      case "installing": return "Continue Learning";
-      case "downloading": return "Continue Learning";
+      case "in_library": return "Start Download";
+      case "downloaded": return "Start Install";
+      case "installing": return "Continue Install";
+      case "downloading": return "Continue Download";
       case "installed": return null; 
       default: return null;
     }
