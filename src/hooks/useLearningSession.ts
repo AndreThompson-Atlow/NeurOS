@@ -603,6 +603,25 @@ export function useLearningSession() {
     return currentDomain.nodes[currentNodeIndex];
   }, [currentDomain, currentNodeIndex]);
 
+  // Check if this is the last node in the module
+  const isLastNode = useMemo(() => {
+    if (!currentActiveModule || !activeSession || typeof currentDomainIndex !== 'number' || typeof currentNodeIndex !== 'number') {
+      return false;
+    }
+    
+    const module = currentActiveModule as Module;
+    if (!module.domains) return false;
+    
+    // Check if we're at the last node of the last domain that has nodes
+    const lastDomainWithNodes = module.domains.slice().reverse().find(d => d.nodes && d.nodes.length > 0);
+    if (!lastDomainWithNodes) return false;
+    
+    const lastDomainIndex = module.domains.findIndex(d => d.id === lastDomainWithNodes.id);
+    const lastNodeIndex = lastDomainWithNodes.nodes.length - 1;
+    
+    return currentDomainIndex === lastDomainIndex && currentNodeIndex === lastNodeIndex;
+  }, [currentActiveModule, activeSession, currentDomainIndex, currentNodeIndex]);
+
   // Base callbacks that don't depend on derived state
   const updateNodeStatusCallback = useCallback((moduleId: string, domainIndex: number, nodeIndex: number, status: NodeStatus, familiar?: boolean, understood?: boolean, lastReviewed?: Date, memoryStrength?: number) => {
     setLearningState(prev => {
@@ -2830,6 +2849,7 @@ export function useLearningSession() {
     currentNode, 
     currentDomainIndex, 
     currentNodeIndex, 
+    isLastNode,
     progress: activeSession ?? { currentModuleId: null, currentDomainIndex: 0, currentNodeIndex: 0, currentPhase: 'download', },
     isLoading, 
     isLoadingCustom, 

@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Download, Check, BrainCircuit, Lightbulb, Search, Wrench, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, Info, FileText as FileTextIcon, HelpCircle, ExternalLink, MessageSquare, Mic, MicOff, ArrowRight, EyeOff, Eye, Edit3, Volume2, VolumeX, CheckCheck, ChevronRight } from 'lucide-react';
+import { Download, Check, BrainCircuit, Lightbulb, Search, Wrench, Link as LinkIcon, Loader2, CheckCircle, AlertTriangle, Info, FileText as FileTextIcon, HelpCircle, ExternalLink, MessageSquare, Mic, MicOff, ArrowRight, EyeOff, Eye, Edit3, Volume2, VolumeX, CheckCheck, ChevronRight, BookCheck } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -26,28 +26,7 @@ import type { GenerateReadingDialogueOutput, DialogueTurn as GenkitDialogueTurn 
 import { Progress } from '@/components/ui/progress';
 
 
-interface NodeDisplayProps {
-  node: Node | null;
-  phase: LearningPhase;
-  probeQuestions: string[];
-  isLoadingProbe: boolean;
-  isLoadingEvaluation: boolean;
-  evaluationResult: EvaluationResult | null;
-  currentEpicStep: EpicStep;
-  currentInteraction: string;
-  onFetchProbe: () => void;
-  onSubmitRecall: (response: string) => void;
-  onSubmitEpic: (response: string) => void;
-  onProceedAfterSuccess: () => void;
-  clearEvaluationResult: () => void;
-  moduleTags?: string[];
-  activeModule?: NeuroModule | null;
-  isListening: boolean;
-  isLoadingSTT: boolean;
-  startRecording: () => void;
-  stopRecording: () => Promise<string | null>;
-  setVoiceTranscriptTarget: (setter: React.Dispatch<React.SetStateAction<string>>) => void;
-  isVoiceModeActive: boolean;
+interface NodeDisplayProps {  node: Node | null;  phase: LearningPhase;  probeQuestions: string[];  isLoadingProbe: boolean;  isLoadingEvaluation: boolean;  evaluationResult: EvaluationResult | null;  currentEpicStep: EpicStep;  currentInteraction: string;  onFetchProbe: () => void;  onSubmitRecall: (response: string) => void;  onSubmitEpic: (response: string) => void;  onProceedAfterSuccess: () => void;  clearEvaluationResult: () => void;  moduleTags?: string[];  activeModule?: NeuroModule | null;  isListening: boolean;  isLoadingSTT: boolean;  startRecording: () => void;  stopRecording: () => Promise<string | null>;  setVoiceTranscriptTarget: (setter: React.Dispatch<React.SetStateAction<string>>) => void;  isVoiceModeActive: boolean;  isLastNode?: boolean;
   allAiCharacters?: Character[]; 
   guideCharacter?: Character | null; 
   generateNodeDialogue?: (
@@ -64,28 +43,7 @@ interface NodeDisplayProps {
   isSpeaking?: boolean;
 }
 
-export function NodeDisplay({
-  node,
-  phase,
-  probeQuestions,
-  isLoadingProbe,
-  isLoadingEvaluation,
-  evaluationResult,
-  currentEpicStep,
-  currentInteraction,
-  onFetchProbe,
-  onSubmitRecall,
-  onSubmitEpic,
-  onProceedAfterSuccess,
-  clearEvaluationResult: clearEvaluationResultCallback,
-  moduleTags = [],
-  activeModule,
-  isListening,
-  isLoadingSTT,
-  startRecording,
-  stopRecording,
-  setVoiceTranscriptTarget,
-  isVoiceModeActive,
+export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  isLoadingEvaluation,  evaluationResult,  currentEpicStep,  currentInteraction,  onFetchProbe,  onSubmitRecall,  onSubmitEpic,  onProceedAfterSuccess,  clearEvaluationResult: clearEvaluationResultCallback,  moduleTags = [],  activeModule,  isListening,  isLoadingSTT,  startRecording,  stopRecording,  setVoiceTranscriptTarget,  isVoiceModeActive,  isLastNode = false,
   allAiCharacters = [],
   guideCharacter,
   generateNodeDialogue,
@@ -181,14 +139,18 @@ export function NodeDisplay({
     }
   }, [node, phase, currentEpicStep, evaluationResult, currentInteraction, isLoadingProbe, probeQuestions.length, onFetchProbe, isNodeUnderstood]);
 
-  // Add this to existing useEffect cleanup
+  // Reset probe question index and clear epic input when node or epic step changes
   useEffect(() => {
     // Reset current probe question index when node or epic step changes
     setCurrentProbeQuestionIndex(0);
     
+    // Clear the epic input when moving to a new EPIC step
+    setEpicInput('');
+    
     // Cleanup function
     return () => {
       setCurrentProbeQuestionIndex(0);
+      setEpicInput('');
     };
   }, [node?.id, currentEpicStep]);
 
@@ -280,19 +242,7 @@ export function NodeDisplay({
     clearEvaluationResultCallback();
   };
 
-  const renderEvaluationFeedbackPanel = () => {
-    if (!evaluationResult) return null;
-    
-    const isProbeWithMoreQuestions = currentEpicStep === 'probe' && 
-                                     currentProbeQuestionIndex < probeQuestions.length - 1;
-    
-    const continueButtonText = isProbeWithMoreQuestions 
-      ? "Next Question" 
-      : currentEpicStep === 'connect' 
-        ? "Next Node" 
-        : "Next Step";
-
-    return (
+    const renderEvaluationFeedbackPanel = () => {    if (!evaluationResult) return null;        const isProbeWithMoreQuestions = currentEpicStep === 'probe' &&                                      currentProbeQuestionIndex < probeQuestions.length - 1;        let continueButtonText = "Next Step";    let isCompletionAction = false;        if (isProbeWithMoreQuestions) {      continueButtonText = "Next Question";    } else if (currentEpicStep === 'connect') {      if (isLastNode) {        continueButtonText = "Complete Module";        isCompletionAction = true;      } else {        continueButtonText = "Next Node";      }    }    return (
       <div className="mt-spacing-md">
         <Card className={cn(
           "neuro-card border-l-4",
@@ -621,10 +571,7 @@ export function NodeDisplay({
                   Complete the steps below to strengthen your understanding
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-spacing-md">
-                {renderActiveEpicStep()}
-                
-                <form onSubmit={handleEpicSubmit} className="space-y-spacing-md">
+                            <CardContent className="space-y-spacing-md">                {renderActiveEpicStep()}                                {/* Show completion section when connect step is passed and evaluation is successful */}                {currentEpicStep === 'connect' && evaluationResult && evaluationResult.isPass && (                  <div className="mt-spacing-md p-spacing-md bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-md">                    <div className="flex items-center gap-spacing-sm mb-spacing-sm">                      <CheckCheck size={18} className="text-emerald-600" />                      <h4 className="font-semibold text-emerald-800 dark:text-emerald-200">                        {isLastNode ? "Module Complete!" : "Node Complete!"}                      </h4>                    </div>                    <p className="text-sm text-emerald-700 dark:text-emerald-300 mb-spacing-md">                      {isLastNode                         ? "Congratulations! You've completed all nodes in this module. Ready to return to your library?"                        : "Excellent work! You've mastered this concept. Ready to move on to the next node?"                      }                    </p>                    <Button                      onClick={onProceedAfterSuccess}                      variant="default"                      size="sm"                      className="bg-emerald-600 hover:bg-emerald-700 text-white"                    >                      {isLastNode ? (                        <>                          <BookCheck size={16} className="mr-spacing-xs" />                          Back to Library                        </>                      ) : (                        <>                          <ArrowRight size={16} className="mr-spacing-xs" />                          Next Node                        </>                      )}                    </Button>                  </div>                )}                                <form onSubmit={handleEpicSubmit} className="space-y-spacing-md">
                   <div className="neuro-input-group">
                     <Label htmlFor="epic-input" className="neuro-label">Your Response</Label>
                     <div className="relative">

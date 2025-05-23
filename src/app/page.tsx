@@ -35,16 +35,7 @@ import { cn } from '@/lib/utils';
 
 export default function Home() {
   const {
-    userModules,
-    availableDungeons,
-    hasAnyInstalledModules,
-    currentModule,
-    currentNode,
-    currentDomain,
-    currentDomainIndex, 
-    currentNodeIndex, 
-    progress,
-    isLoading,
+        userModules,    availableDungeons,    hasAnyInstalledModules,    currentModule,    currentNode,    currentDomain,    currentDomainIndex,     currentNodeIndex,     isLastNode,    progress,    isLoading,
     isLoadingChronicle,
     detailedLoadingProgress,
     probeQuestions,
@@ -464,29 +455,7 @@ export default function Home() {
         return (
           <div className="neuro-container neuro-fade-in space-y-spacing-lg">
             <ProgressBar module={currentModule} progress={progress} />
-            <NodeDisplay
-              node={currentNode}
-              phase={progress.currentPhase}
-              probeQuestions={probeQuestions}
-              isLoadingProbe={isLoading && currentEpicStep === 'probe'}
-              isLoadingEvaluation={isLoading}
-              evaluationResult={evaluationResult}
-              currentEpicStep={currentEpicStep}
-              currentInteraction={currentInteraction}
-              onFetchProbe={fetchProbeQuestions}
-              onSubmitRecall={submitRecallResponse}
-              onSubmitEpic={submitEpicResponse}
-              onProceedAfterSuccess={handleProceedAfterSuccess}
-              clearEvaluationResult={clearEvaluationResult}
-              moduleTags={currentModule.tags}
-              activeModule={currentModule}
-              isListening={isListening}
-              isLoadingSTT={isLoadingSTT}
-              startRecording={startLocalRecording}
-              stopRecording={stopLocalRecording}
-              setVoiceTranscriptTarget={setVoiceTranscriptTarget}
-              isVoiceModeActive={isVoiceModeActive}
-            />
+                        <NodeDisplay              node={currentNode}              phase={progress.currentPhase}              probeQuestions={probeQuestions}              isLoadingProbe={isLoading && currentEpicStep === 'probe'}              isLoadingEvaluation={isLoading}              evaluationResult={evaluationResult}              currentEpicStep={currentEpicStep}              currentInteraction={currentInteraction}              onFetchProbe={fetchProbeQuestions}              onSubmitRecall={submitRecallResponse}              onSubmitEpic={submitEpicResponse}              onProceedAfterSuccess={handleProceedAfterSuccess}              clearEvaluationResult={clearEvaluationResult}              moduleTags={currentModule.tags}              activeModule={currentModule}              isListening={isListening}              isLoadingSTT={isLoadingSTT}              startRecording={startLocalRecording}              stopRecording={stopLocalRecording}              setVoiceTranscriptTarget={setVoiceTranscriptTarget}              isVoiceModeActive={isVoiceModeActive}              isLastNode={isLastNode}            />
              <div className="flex justify-end mt-spacing-lg">
                  <Button variant="outline" onClick={resetSession} className="neuro-button border-destructive text-destructive hover:bg-destructive/10 text-sm">End Learning Session</Button>
              </div>
