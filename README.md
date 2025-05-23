@@ -53,6 +53,24 @@ NeuroOS is a learning application designed to help users improve their cognitive
 - Use consistent naming conventions
 - Write unit tests for critical functionality
 
+## API Key Setup
+
+⚠️ **Important**: API keys are kept local and not committed to git to prevent GitHub's secret scanning from invalidating them.
+
+### Setup:
+1. Copy `src/config/keys.example.ts` to `src/config/keys.ts`
+2. Replace the placeholder values with your actual API keys
+3. The `keys.ts` file is automatically ignored by git
+
+### Environment Variables (Production):
+You can also use environment variables instead of hardcoded keys:
+```bash
+GOOGLE_AI_API_KEY=your-key-here
+OPENAI_API_KEY=your-key-here  
+CLAUDE_API_KEY=your-key-here
+AI_PROVIDER=claude  # or 'gemini', 'openai'
+```
+
 ## Getting Started
 
 1. Clone the repository

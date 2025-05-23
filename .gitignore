@@ -37,6 +37,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# API Keys and Secrets (prevent GitHub secret scanning from invalidating them)
+src/config/keys.ts
+
 .genkit/*
 .env*
 
