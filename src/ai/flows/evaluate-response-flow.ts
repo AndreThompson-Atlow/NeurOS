@@ -75,6 +75,12 @@ const DUMMY_SIMPLIFIED_RESPONSE: EvaluateResponseOutput = {
 export async function evaluateResponse(input: EvaluateResponseInput): Promise<EvaluateResponseOutput> {
   console.log('[evaluateResponseFlow]: ENTERED with input:', JSON.stringify(input, null, 2));
   
+  // Get user's selected AI provider from input or use defaults
+  const userProvider = input.provider || 'gemini';
+  const userModelKey = input.modelKey || userProvider;
+  
+  console.log(`🤖 [EVAL-FLOW] Using AI provider: ${userProvider} with model: ${userModelKey}`);
+  
   let rawAiOutputString: string | null = null;
   let rawSimplifiedText: string | null = null;
   let debugErrorForSimplifiedPath: string | null = null;
@@ -100,6 +106,23 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
     isRelevant: true,
     isWellStructured: true,
     showsUnderstanding: true
+  };
+
+  // Helper function to call AI with provider selection
+  const callAIWithProviderSelection = async (prompt: string): Promise<string> => {
+    try {
+      const response = await callAIProvider(prompt, userProvider, userModelKey);
+      
+      if (response.error) {
+        console.error(`❌ [EVAL-FLOW] AI provider error:`, response.error);
+        throw new Error(`AI provider error: ${response.error}`);
+      }
+      
+      return response.text || '';
+    } catch (error) {
+      console.error(`💥 [EVAL-FLOW] AI call failed:`, error);
+      throw error;
+    }
   };
 
   // SIMPLIFIED EVALUATION PATH (when Thought Analyzer is disabled)
@@ -144,9 +167,8 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
           }
           
           // Try with the specified character first
-          const rawResponse = await callAIWithCharacter(
-              simplifiedPrompt,
-              input.judgingCharacterId || 'neuros'
+          const rawResponse = await callAIWithProviderSelection(
+              simplifiedPrompt
           );
   
           rawSimplifiedText = rawResponse;
@@ -163,9 +185,8 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
           if (attemptCount === MAX_ATTEMPTS - 1) {
             try {
               console.log('[evaluateResponseFlow]: Final retry with fallback character...');
-              const fallbackResponse = await callAIWithCharacter(
-                  simplifiedPrompt,
-                  'neuros' // Always use neuros as fallback
+              const fallbackResponse = await callAIWithProviderSelection(
+                  simplifiedPrompt
               );
               
               rawSimplifiedText = fallbackResponse;
@@ -305,9 +326,8 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
                 If they did well (score > 75), offer praise. If they struggled (score < 60), offer a constructive pointer.
              `;
             try {
-                const feedbackResult = await callAIWithCharacter(
-                    personalityPromptForFeedback,
-                    input.judgingCharacterId
+                const feedbackResult = await callAIWithProviderSelection(
+                    personalityPromptForFeedback
                 );
                 personalityFeedbackText = (feedbackResult && feedbackResult.trim()) ? feedbackResult.trim() : `(${character.name} nods thoughtfully at your response.)`;
             } catch (e) {
@@ -400,9 +420,8 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       }
     }
     
-    const llmResponse = await callAIWithCharacter(
-      processedPrompt,
-      input.judgingCharacterId || 'neuros'
+    const llmResponse = await callAIWithProviderSelection(
+      processedPrompt
     );
 
     rawAiOutputString = llmResponse;
@@ -517,11 +536,8 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
               If they struggled (score < 60), offer a specific, constructive pointer related to a low-scoring rubric dimension.
            `;
           try {
-              const personalityFeedbackResult = await callAIWithCharacter(
-                  personalityPromptForFeedback,
-                  input.judgingCharacterId, 
-                  undefined,
-                  undefined
+              const personalityFeedbackResult = await callAIWithProviderSelection(
+                  personalityPromptForFeedback
               );
               personalityFeedbackText = (personalityFeedbackResult && personalityFeedbackResult.trim()) ? personalityFeedbackResult.trim() : `(${character.name} ponders your response...)`;
           } catch (e) {
@@ -662,35 +678,4 @@ function calculateSimilarity(text1: string, text2: string): number {
   const intersection = new Set([...set1].filter(x => set2.has(x)));
   const union = new Set([...set1, ...set2]);
   return union.size === 0 ? 0 : intersection.size / union.size;
-}
-
-// Helper function to call AI with provider selection and character personality
-async function callAIWithCharacter(prompt: string, characterId?: string, provider?: string, modelKey?: string): Promise<string | null> {
-  try {
-    // Get character personality if provided
-    let enhancedPrompt = prompt;
-    if (characterId) {
-      try {
-        const character = await fetchCharacterDetails(characterId);
-        if (character?.personalityProfile) {
-          enhancedPrompt = `${character.personalityProfile}\n\nUser Request: ${prompt}`;
-        }
-      } catch (characterError) {
-        console.warn(`Could not load character ${characterId}:`, characterError);
-      }
-    }
-
-    // Call the AI provider
-    const response = await callAIProvider(enhancedPrompt, provider, modelKey);
-    
-    if (response.error) {
-      console.error("AI provider error:", response.error);
-      return null;
-    }
-
-    return response.text;
-  } catch (error) {
-    console.error("Error in callAIWithCharacter:", error);
-    return null;
-  }
 }

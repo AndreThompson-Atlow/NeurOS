@@ -1409,6 +1409,9 @@ export function useLearningSession() {
             judgingCharacterId: judgingCharacterId, 
             nodeContent: nodeContentForMimicryCheck,
             isThoughtAnalyzerEnabled: learningState.isThoughtAnalyzerEnabled,
+            // Add provider information to evaluation flow
+            provider: learningState.aiProvider, // Pass the user's selected AI provider
+            modelKey: learningState.aiProvider, // Use the same value for modelKey
         };
         
         console.log('[performFullEvaluationCallback]: Calling evaluateResponseFlow with input:', JSON.stringify(evalInputForFlow, null, 2));

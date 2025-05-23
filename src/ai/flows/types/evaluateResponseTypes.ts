@@ -13,17 +13,20 @@ export const EvaluateResponseInputSchema = z.object({
   userResponse: z.string().describe("The user's submitted response for the step."),
   judgingCharacterId: z.string().optional().describe("ID of the AI character whose personality should influence the evaluation style for generic feedback."),
   nodeContent: z.string().optional().describe("The full content of the node (clarification, example, scenario) for mimicry detection if available."),
-  isThoughtAnalyzerEnabled: z.boolean().optional().describe("Flag to indicate if full Thought Analyzer processing is enabled.")
+  isThoughtAnalyzerEnabled: z.boolean().optional().describe("Flag to indicate if full Thought Analyzer processing is enabled."),
+  provider: z.string().optional().describe("AI provider to use for evaluation (e.g., 'gemini', 'openai', 'claude4')."),
+  modelKey: z.string().optional().describe("Specific model key for the provider (e.g., 'claudeSonnet4', 'openai').")
 });
 export type EvaluateResponseInput = z.infer<typeof EvaluateResponseInputSchema>;
 
 /**
- * Schema for a single dimension score in the rubric
+ * Schema for individual rubric dimension scores
  */
 export const RubricDimensionScoreSchema = z.object({
-  score: z.number().min(0).max(1.0).describe("Score for this dimension, from 0.0 (poor) to 1.0 (excellent)."),
-  label: z.string().max(30).describe("Short narrative label (2-5 words) for this dimension's score, e.g., 'Very clear,' 'Lacks depth'.")
-}) satisfies z.ZodType<NeuroRubricDimensionScore>; 
+  score: z.number().min(0).max(1).describe('Score for this dimension (0.0-1.0)'),
+  label: z.string().describe('Brief descriptive label for the score'),
+  feedback: z.string().describe('Detailed feedback for this dimension')
+});
 
 /**
  * Schema for all rubric scores
