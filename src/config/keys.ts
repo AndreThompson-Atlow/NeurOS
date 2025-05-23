@@ -20,7 +20,7 @@ export const CONFIG = {
     defaultModel: process.env.AI_DEFAULT_MODEL || 'gemini-pro',
     timeout: parseInt(process.env.AI_TIMEOUT || '60000', 10),
     fallbackMode: process.env.AI_FALLBACK_MODE === 'true' || false,
-    provider: process.env.AI_PROVIDER || 'gemini', // 'gemini', 'openai', or 'claude'
+    provider: process.env.AI_PROVIDER || 'claude4', // 'gemini', 'openai', 'claude', 'claude4', etc.
   },
   app: {
     name: 'NeurOS',

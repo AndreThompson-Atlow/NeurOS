@@ -242,62 +242,6 @@ export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  
     clearEvaluationResultCallback();
   };
 
-    const renderEvaluationFeedbackPanel = () => {    if (!evaluationResult) return null;        const isProbeWithMoreQuestions = currentEpicStep === 'probe' &&                                      currentProbeQuestionIndex < probeQuestions.length - 1;        let continueButtonText = "Next Step";    let isCompletionAction = false;        if (isProbeWithMoreQuestions) {      continueButtonText = "Next Question";    } else if (currentEpicStep === 'connect') {      if (isLastNode) {        continueButtonText = "Complete Module";        isCompletionAction = true;      } else {        continueButtonText = "Next Node";      }    }    return (
-      <div className="mt-spacing-md">
-        <Card className={cn(
-          "neuro-card border-l-4",
-          evaluationResult.isPass ? "border-l-emerald-500" : "border-l-destructive"
-        )}>
-          <CardHeader className="pb-spacing-sm">
-            <CardTitle className={cn(
-              "text-md flex items-center gap-spacing-sm font-medium",
-              evaluationResult.isPass ? "text-emerald-500" : "text-destructive"
-            )}>
-              {evaluationResult.isPass ? (
-                <><CheckCheck size={18} /> Success</>
-              ) : (
-                <><AlertTriangle size={18} /> Needs Improvement</>
-              )}
-              <span className="ml-2 text-sm font-normal">
-                Score: {evaluationResult.score}/100
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className={cn(
-            "text-sm",
-            evaluationResult.isPass ? "text-slate-200" : "text-destructive/90"
-          )}>
-            <p>{evaluationResult.overallFeedback}</p>
-          </CardContent>
-          <CardFooter className="pt-spacing-sm border-t border-border/30 flex justify-between">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={handleReviseAnswer}
-              className="text-muted-foreground text-xs neuro-button"
-            >
-              <Edit3 size={14} className="mr-spacing-xs" /> Revise
-            </Button>
-            
-            <Button 
-              variant={evaluationResult.isPass ? "default" : "secondary"} 
-              size="sm" 
-              onClick={isProbeWithMoreQuestions ? handleAdvanceToNextProbeQuestion : onProceedAfterSuccess}
-              disabled={!evaluationResult.isPass}
-              className="neuro-button"
-            >
-              {continueButtonText} {isProbeWithMoreQuestions ? (
-                <ChevronRight size={14} className="ml-spacing-xs" />
-              ) : (
-                <ArrowRight size={14} className="ml-spacing-xs" />
-              )}
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  };
-
   const renderTermsWithDefinitions = (terms: string[], title: string, termType: 'keyTerm' | 'moduleTag' = 'keyTerm') => {
       if (!terms || terms.length === 0) return null;
       
@@ -475,7 +419,14 @@ export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  
                   </div>
                 </form>
                 
-                {evaluationResult && renderEvaluationFeedbackPanel()}
+                {evaluationResult && (
+                  <ThoughtAnalyzerPanel
+                    userInput={recallInput || ''}
+                    evaluationResult={evaluationResult}
+                    judgingCharacterId={activeModule?.defaultCompanion || 'neuros'}
+                    onResubmit={handleReviseAnswer}
+                  />
+                )}
               </CardContent>
             </Card>
           )}
@@ -623,7 +574,14 @@ export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  
                   </div>
                 </form>
                 
-                {evaluationResult && renderEvaluationFeedbackPanel()}
+                {evaluationResult && (
+                  <ThoughtAnalyzerPanel
+                    userInput={epicInput || ''}
+                    evaluationResult={evaluationResult}
+                    judgingCharacterId={activeModule?.defaultCompanion || 'neuros'}
+                    onResubmit={handleReviseAnswer}
+                  />
+                )}
               </CardContent>
             </Card>
           )}

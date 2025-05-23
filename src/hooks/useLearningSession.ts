@@ -151,7 +151,7 @@ const getDefaultLearningState = async (): Promise<UserLearningState> => {
         activeReadingSession: null,
         currentUserProfile: defaultUserProfile,
         activeReviewSession: null,
-        isThoughtAnalyzerEnabled: false,
+        isThoughtAnalyzerEnabled: true,
         aiProvider: CONFIG.AI.provider,
     };
 };
@@ -356,7 +356,7 @@ export function useLearningSession() {
           activeReadingSession: null,
           currentUserProfile: defaultUserProfileSync,
           activeReviewSession: null,
-          isThoughtAnalyzerEnabled: false,
+          isThoughtAnalyzerEnabled: true,
           aiProvider: CONFIG.AI.provider,
       };
   });
@@ -1437,18 +1437,39 @@ export function useLearningSession() {
         let feedbackOutputData: FeedbackOutput | undefined = detailedEvalResult.feedbackOutput;
 
         if (learningState.isThoughtAnalyzerEnabled && detailedEvalResult.rubricScores && Object.values(detailedEvalResult.rubricScores).some(rs => rs && rs.label && !rs.label.endsWith("N/A"))) {
-            analysisResultData = await analyzeThoughtProcess({ userInput, analysisContext });
-            const shameEngineOutput = await processWithShameEngine({
-                analysisResult: analysisResultData,
-                userProfile: currentProfile!,
-            });
-            shameIndexResultData = shameEngineOutput.shameIndexResult;
-            feedbackOutputData = { 
-                ...detailedEvalResult.feedbackOutput, 
-                ...shameEngineOutput.feedbackOutput,  
-                mainFeedback: feedbackOutputData?.mainFeedback || shameEngineOutput.feedbackOutput.mainFeedback, 
-            };
+            console.log(`🧠 [EVAL-HOOK] Thought Analyzer ENABLED - calling analyzeThoughtProcess...`);
+            console.log(`🧠 [EVAL-HOOK] userInput:`, JSON.stringify(userInput, null, 2));
+            console.log(`🧠 [EVAL-HOOK] analysisContext:`, JSON.stringify(analysisContext, null, 2));
+            try {
+                analysisResultData = await analyzeThoughtProcess({ userInput, analysisContext });
+                console.log(`🧠 [EVAL-HOOK] analyzeThoughtProcess result:`, JSON.stringify(analysisResultData, null, 2));
+                
+                console.log(`🔧 [EVAL-HOOK] Calling processWithShameEngine...`);
+                console.log(`🔧 [EVAL-HOOK] currentProfile:`, JSON.stringify(currentProfile, null, 2));
+                const shameEngineOutput = await processWithShameEngine({
+                    analysisResult: analysisResultData,
+                    userProfile: currentProfile!,
+                });
+                console.log(`🔧 [EVAL-HOOK] processWithShameEngine result:`, JSON.stringify(shameEngineOutput, null, 2));
+                
+                shameIndexResultData = shameEngineOutput.shameIndexResult;
+                feedbackOutputData = { 
+                    ...detailedEvalResult.feedbackOutput, 
+                    ...shameEngineOutput.feedbackOutput,  
+                    mainFeedback: feedbackOutputData?.mainFeedback || shameEngineOutput.feedbackOutput.mainFeedback, 
+                };
+                console.log(`🎯 [EVAL-HOOK] Final feedbackOutputData:`, JSON.stringify(feedbackOutputData, null, 2));
+            } catch (thoughtAnalyzerError) {
+                console.error(`❌ [EVAL-HOOK] Thought Analyzer Error:`, thoughtAnalyzerError);
+                // Continue with basic evaluation if thought analyzer fails
+            }
         } else {
+            console.log(`🧠 [EVAL-HOOK] Thought Analyzer DISABLED or insufficient rubric data`);
+            console.log(`  - isThoughtAnalyzerEnabled: ${learningState.isThoughtAnalyzerEnabled}`);
+            console.log(`  - has rubricScores: ${!!detailedEvalResult.rubricScores}`);
+            if (detailedEvalResult.rubricScores) {
+                console.log(`  - rubric labels: ${Object.entries(detailedEvalResult.rubricScores).map(([k,v]) => `${k}:${v?.label}`).join(', ')}`);
+            }
             feedbackOutputData = {
                 mainFeedback: detailedEvalResult.overallFeedback, 
                 growthSuggestions: [],
