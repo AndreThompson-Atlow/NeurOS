@@ -23,7 +23,7 @@ interface ThoughtAnalyzerPanelProps {
 const RubricDimensionDisplay: React.FC<{ label: string; scoreData: RubricDimensionScoreType | undefined }> = ({ label, scoreData }) => {
   if (!scoreData) {
     return (
-      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-spacing-xs py-spacing-xs border-b border-border/20 last:border-b-0">
+      <div className="grid grid-cols-[1fr_auto_auto] items-center gap-spacing-sm py-spacing-sm border-b border-border/20 last:border-b-0">
         <p className="text-sm text-foreground/70">{label}</p>
         <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">N/A</Badge>
         <p className="text-sm font-semibold w-12 text-right text-muted-foreground">--%</p>
@@ -37,7 +37,7 @@ const RubricDimensionDisplay: React.FC<{ label: string; scoreData: RubricDimensi
   else scoreColorClass = "text-status-needs-review";
 
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-spacing-xs py-spacing-xs border-b border-border/20 last:border-b-0">
+    <div className="grid grid-cols-[1fr_auto_auto] items-center gap-spacing-sm py-spacing-sm border-b border-border/20 last:border-b-0">
       <p className="text-sm text-foreground/90">{label}</p>
       <Badge variant="outline" className={cn("text-xs text-nowrap", scoreColorClass, scoreColorClass.replace('text-','border-'))} title={narrativeLabel}>{narrativeLabel.length > 20 ? narrativeLabel.substring(0,18) + "..." : narrativeLabel}</Badge>
       <p className={cn("text-sm font-semibold w-12 text-right", scoreColorClass)}>{(score * 100).toFixed(0)}%</p>
@@ -103,27 +103,27 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
 
 
   return (
-    <Card className={cn("mt-spacing-md p-spacing-md shadow-cyan-md border-t-4 w-full", passOrFailBorder, passOrFailBg)}>
-      <CardHeader className="p-0 mb-spacing-md">
-        <div className="flex justify-between items-center">
-            <CardTitle className={cn("text-2xl font-display flex items-center gap-spacing-sm", passOrFailColor)}>
+    <Card className={cn("mt-spacing-lg p-spacing-lg shadow-cyan-md border-t-4 w-full", passOrFailBorder, passOrFailBg)}>
+      <CardHeader className="p-0 mb-spacing-lg">
+        <div className="flex justify-between items-center mb-spacing-md">
+            <CardTitle className={cn("text-2xl font-display flex items-center gap-spacing-md", passOrFailColor)}>
                 {isPass ? <CheckCircle size={28} /> : <AlertCircle size={28} />}
                 Thought Analyzer Report
             </CardTitle>
-            <Badge variant={isPass ? "default" : "destructive"} className={cn("text-xl px-spacing-sm py-spacing-xs", isPass ? `bg-primary text-primary-foreground` : `bg-destructive text-destructive-foreground`)}>
+            <Badge variant={isPass ? "default" : "destructive"} className={cn("text-xl px-spacing-md py-spacing-sm", isPass ? `bg-primary text-primary-foreground` : `bg-destructive text-destructive-foreground`)}>
                 {(overallScore || 0).toFixed(0)}%
             </Badge>
         </div>
          {overallFeedback && (
-            <CardDescription className="text-base text-foreground/80 pt-spacing-sm leading-relaxed">
+            <CardDescription className="text-base text-foreground/80 pt-spacing-md leading-relaxed">
               <strong>Overall Assessment:</strong> {overallFeedback}
             </CardDescription>
         )}
       </CardHeader>
-      <CardContent className="p-0 space-y-spacing-md">
+      <CardContent className="p-0 space-y-spacing-lg">
         {personalityFeedback && (
-          <div className="p-spacing-sm bg-card/70 rounded-md border border-border/50 shadow-sm">
-            <h4 className="text-md font-semibold text-glow-cyan flex items-center gap-spacing-xs mb-spacing-xs">
+          <div className="p-spacing-md bg-card/70 rounded-md border border-border/50 shadow-sm">
+            <h4 className="text-md font-semibold text-glow-cyan flex items-center gap-spacing-sm mb-spacing-sm">
                 <MessageSquare size={18}/> {judgingCharacterName} Says:
             </h4>
             <p className="text-sm text-foreground/90 italic leading-relaxed">{personalityFeedback}</p>
@@ -131,13 +131,13 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
         )}
 
         {displayShameEngineWarning && detailedAnalysisPerformed && ( // Only show if detailed analysis happened
-          <div className="mt-spacing-md p-spacing-md bg-destructive/10 border border-destructive/50 rounded-md flex items-start gap-spacing-md animate-pulse-destructive">
+          <div className="mt-spacing-lg p-spacing-lg bg-destructive/10 border border-destructive/50 rounded-md flex items-start gap-spacing-md animate-pulse-destructive">
             <Zap size={32} className="text-destructive flex-shrink-0 mt-1" />
             <div>
-              <p className="text-lg font-semibold text-destructive">{judgingCharacterName} notes a concern:</p>
-              <p className="text-destructive-foreground/90">{shameEngineMessage}</p>
+              <p className="text-lg font-semibold text-destructive mb-spacing-sm">{judgingCharacterName} notes a concern:</p>
+              <p className="text-destructive-foreground/90 mb-spacing-md">{shameEngineMessage}</p>
               {onResubmit && (
-                <Button onClick={onResubmit} variant="destructive" size="sm" className="mt-spacing-sm text-xs btn-destructive">
+                <Button onClick={onResubmit} variant="destructive" size="sm" className="mt-spacing-md text-xs btn-destructive">
                     <Edit3 size={16} className="mr-spacing-xs"/> Retry with Integrity
                 </Button>
               )}
@@ -148,12 +148,12 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
         {detailedAnalysisPerformed && rubricScores && (
             <Accordion type="single" collapsible className="w-full" defaultValue="summary">
             <AccordionItem value="summary" className="border-border/30">
-              <AccordionTrigger className="text-lg font-semibold text-glow-cyan hover:no-underline py-spacing-sm">
+              <AccordionTrigger className="text-lg font-semibold text-glow-cyan hover:no-underline py-spacing-md">
                 <BarChart3 size={22} className="mr-spacing-sm text-secondary" />Detailed Rubric Scores
               </AccordionTrigger>
-              <AccordionContent className="pt-spacing-sm space-y-spacing-md">
-                <div className="grid md:grid-cols-2 gap-spacing-md items-center">
-                  <div className="h-64 md:h-72">
+              <AccordionContent className="pt-spacing-lg space-y-spacing-lg">
+                <div className="grid md:grid-cols-2 gap-spacing-lg items-center">
+                  <div className="h-72 md:h-80">
                     <ResponsiveContainer width="100%" height="100%">
                       <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
                         <PolarGrid stroke="hsl(var(--border))" />
@@ -174,7 +174,7 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
                       </RadarChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="space-y-spacing-xs">
+                  <div className="space-y-spacing-sm">
                     <RubricDimensionDisplay label="Clarity" scoreData={rubricScores.clarity} />
                     <RubricDimensionDisplay label="Relevance" scoreData={rubricScores.relevance} />
                     <RubricDimensionDisplay label="Depth of Thought" scoreData={rubricScores.depthOfThought} />
@@ -191,18 +191,18 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
         )}
         
         {detailedAnalysisPerformed && feedbackOutput?.growthSuggestions && feedbackOutput.growthSuggestions.length > 0 && (
-          <div className="mt-spacing-sm p-spacing-sm bg-primary/10 border border-primary/30 rounded-md">
-            <h5 className="text-md font-semibold text-glow-gold mb-spacing-xs flex items-center gap-spacing-xs"><TrendingUp size={18}/>Growth Suggestions:</h5>
-            <ul className="list-disc list-inside pl-spacing-sm space-y-spacing-xs text-sm text-primary-foreground/90">
-              {feedbackOutput.growthSuggestions.map((suggestion, index) => <li key={`growth-${index}`}>{suggestion}</li>)}
+          <div className="mt-spacing-lg p-spacing-md bg-primary/10 border border-primary/30 rounded-md">
+            <h5 className="text-md font-semibold text-glow-gold mb-spacing-md flex items-center gap-spacing-sm"><TrendingUp size={18}/>Growth Suggestions:</h5>
+            <ul className="list-disc list-inside pl-spacing-sm space-y-spacing-sm text-sm text-primary-foreground/90">
+              {feedbackOutput.growthSuggestions.map((suggestion: string, index: number) => <li key={`growth-${index}`}>{suggestion}</li>)}
             </ul>
           </div>
         )}
          {detailedAnalysisPerformed && feedbackOutput?.metacognitivePrompts && feedbackOutput.metacognitivePrompts.length > 0 && (
-          <div className="mt-spacing-sm p-spacing-sm bg-secondary/10 border border-secondary/30 rounded-md">
-            <h5 className="text-md font-semibold text-glow-cyan mb-spacing-xs flex items-center gap-spacing-xs"><FileText size={18}/>For Reflection:</h5>
-            <ul className="list-disc list-inside pl-spacing-sm space-y-spacing-xs text-sm text-secondary-foreground/90">
-              {feedbackOutput.metacognitivePrompts.map((prompt, index) => <li key={`reflect-${index}`}>{prompt}</li>)}
+          <div className="mt-spacing-lg p-spacing-md bg-secondary/10 border border-secondary/30 rounded-md">
+            <h5 className="text-md font-semibold text-glow-cyan mb-spacing-md flex items-center gap-spacing-sm"><FileText size={18}/>For Reflection:</h5>
+            <ul className="list-disc list-inside pl-spacing-sm space-y-spacing-sm text-sm text-secondary-foreground/90">
+              {feedbackOutput.metacognitivePrompts.map((prompt: string, index: number) => <li key={`reflect-${index}`}>{prompt}</li>)}
             </ul>
           </div>
         )}
@@ -211,7 +211,7 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
       {/* Only show "Revise Answer" if detailed analysis was NOT displayed (meaning analyzer was off) AND it's not a pass */}
       {/* OR if it's not a pass and it's NOT a shame engine warning case (which has its own retry) */}
       {onResubmit && !isPass && (!detailedAnalysisPerformed || !displayShameEngineWarning) && (
-      <CardFooter className="p-0 mt-spacing-md pt-spacing-md border-t border-border/30 flex justify-end gap-spacing-sm">
+      <CardFooter className="p-0 mt-spacing-lg pt-spacing-lg border-t border-border/30 flex justify-end gap-spacing-sm">
           <Button onClick={onResubmit} variant="secondary" size="sm" className="text-xs btn-neutral">
             <Edit3 size={16} className="mr-spacing-xs"/> Revise Answer
           </Button>
