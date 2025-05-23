@@ -2078,9 +2078,21 @@ export function useLearningSession() {
 
   const admin_clearUserDataCallback = useCallback(async () => {
     if (typeof window !== 'undefined') {
+        // Clear main learning state
         localStorage.removeItem(LOCAL_STORAGE_KEY);
         localStorage.removeItem(CHRONICLE_RUN_KEY); 
         localStorage.removeItem(PLAYER_BASE_KEY); 
+        
+        // Clear all chat dialogue history
+        // Chat history is stored with keys like: "neuro_chat_history_[moduleId]"
+        const allKeys = Object.keys(localStorage);
+        const chatHistoryKeys = allKeys.filter(key => key.startsWith('neuro_chat_history_'));
+        chatHistoryKeys.forEach(key => {
+          console.log("Clearing chat history:", key);
+          localStorage.removeItem(key);
+        });
+        
+        console.log(`Cleared ${chatHistoryKeys.length} chat history entries`);
     }
     const defaultState = await getDefaultLearningState();
     setLearningState(defaultState);
@@ -2092,7 +2104,7 @@ export function useLearningSession() {
     setIsChronicleSystemReady(false); 
     reviewNotificationShownRef.current = false; 
     isInitialLoadDoneRef.current = false; 
-    queueToast({ title: "User Data Cleared", description: "All progress and settings have been reset. Application will reload.", variant: "destructive" });
+    queueToast({ title: "All Data Cleared", description: "All progress, settings, and chat history have been reset. Application will reload.", variant: "destructive" });
     if (typeof window !== 'undefined') {
         setTimeout(() => window.location.reload(), 1500);
     }
@@ -2511,20 +2523,55 @@ export function useLearningSession() {
   const toggleThoughtAnalyzerCallback = useCallback(() => {
     setLearningState(prev => {
         const newStateValue = !prev.isThoughtAnalyzerEnabled;
+        const newState = { ...prev, isThoughtAnalyzerEnabled: newStateValue };
+        
         console.log(`[toggleThoughtAnalyzerCallback] Current: ${prev.isThoughtAnalyzerEnabled}, Toggling to: ${newStateValue}`);
         queueToast({ title: "Thought Analyzer", description: newStateValue ? "Enabled" : "Disabled" });
-        return { ...prev, isThoughtAnalyzerEnabled: newStateValue };
+        
+        // Save immediately to localStorage to ensure persistence
+        setTimeout(() => saveStateToLocalStorage(newState), 0);
+        
+        return newState;
     });
   }, [queueToast, setLearningState]);
 
   // Set AI provider function
   const setAIProviderCallback = useCallback((provider: string) => {
-    // Only accept valid providers
-    if (['gemini', 'openai', 'claude'].includes(provider)) {
+    // Only accept valid providers (including specific Claude models)
+    const validProviders = ['gemini', 'openai', 'claude', 'claude37', 'claude4', 'claudeOpus4'];
+    if (validProviders.includes(provider)) {
       setLearningState(prev => {
         const newState = { ...prev, aiProvider: provider };
-        queueToast({ title: "AI Provider", description: `Set to ${provider.charAt(0).toUpperCase() + provider.slice(1)}` });
+        let displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
+        
+        // Provide better display names for specific models
+        switch (provider) {
+          case 'claude37':
+            displayName = 'Claude 3.7 Sonnet';
+            break;
+          case 'claude4':
+            displayName = 'Claude 4 Sonnet';
+            break;
+          case 'claudeOpus4':
+            displayName = 'Claude 4 Opus';
+            break;
+          case 'claude':
+            displayName = 'Claude 3.5 Sonnet';
+            break;
+          case 'gemini':
+            displayName = 'Gemini 1.5 Pro';
+            break;
+          case 'openai':
+            displayName = 'GPT-4 Turbo';
+            break;
+        }
+        
+        queueToast({ title: "AI Provider", description: `Set to ${displayName}` });
         console.log(`AI provider set to: ${provider}`);
+        
+        // Save immediately to localStorage to ensure persistence
+        setTimeout(() => saveStateToLocalStorage(newState), 0);
+        
         return newState;
       });
     } else {

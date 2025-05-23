@@ -17,10 +17,10 @@
  */
 
 // Using consistent relative paths due to persistent resolution issues with aliases
-import {ai as baseAi, generateWithCharacter} from '../../../lib/server/genkit'; 
+import { callAIProvider } from '../../../src/utils/ai-providers';
+import { getCharacterById as fetchCharacterDetails } from '../../../lib/server/characters';
 import {z} from 'genkit';
 import type { RubricScores as NeuroRubricScores, QualityFlags as NeuroQualityFlags, FeedbackOutput as NeuroFeedbackOutput, AnalysisResult, ShameIndexResult } from '@/types/neuro'; 
-import { getCharacterById as fetchCharacterDetails } from '../../../lib/server/characters';
 import { 
     EvaluateResponseInputSchema, 
     type EvaluateResponseInput,
@@ -144,13 +144,12 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
           }
           
           // Try with the specified character first
-          const llmSimplifiedResponse = await generateWithCharacter({
-              prompt: simplifiedPrompt,
-              characterId: input.judgingCharacterId || 'neuros',
-              config: { temperature: 0.5, maxOutputTokens: 400 },
-          });
+          const rawResponse = await callAIWithCharacter(
+              simplifiedPrompt,
+              input.judgingCharacterId || 'neuros'
+          );
   
-          rawSimplifiedText = (llmSimplifiedResponse as any)?.response?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+          rawSimplifiedText = rawResponse;
           responseReceived = !!rawSimplifiedText;
           console.log('[SIMPLIFIED AI RAW STRING OUTPUT - PRE-PARSE]:', rawSimplifiedText);
           
@@ -164,13 +163,12 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
           if (attemptCount === MAX_ATTEMPTS - 1) {
             try {
               console.log('[evaluateResponseFlow]: Final retry with fallback character...');
-              const fallbackResponse = await generateWithCharacter({
-                  prompt: simplifiedPrompt,
-                  characterId: 'neuros', // Always use neuros as fallback
-                  config: { temperature: 0.5, maxOutputTokens: 400 },
-              });
+              const fallbackResponse = await callAIWithCharacter(
+                  simplifiedPrompt,
+                  'neuros' // Always use neuros as fallback
+              );
               
-              rawSimplifiedText = (fallbackResponse as any)?.response?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+              rawSimplifiedText = fallbackResponse;
               responseReceived = !!rawSimplifiedText;
               console.log('[SIMPLIFIED AI FALLBACK OUTPUT]:', rawSimplifiedText);
             } catch (fallbackError) {
@@ -290,6 +288,9 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
     
     overallFeedbackToUse = simplifiedParsedOutput.overallFeedback;
 
+    // Initialize personality feedback
+    let personalityFeedbackText = "Your response has been recorded.";
+
     // Generate personality-based feedback if a character ID is provided
     if(input.judgingCharacterId) {
         const character = await fetchCharacterDetails(input.judgingCharacterId);
@@ -304,13 +305,11 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
                 If they did well (score > 75), offer praise. If they struggled (score < 60), offer a constructive pointer.
              `;
             try {
-                const personalityFeedbackResult = await generateWithCharacter({
-                    prompt: personalityPromptForFeedback,
-                    characterId: input.judgingCharacterId, 
-                    config: { temperature: 0.6, maxOutputTokens: 200 }
-                });
-                const rawPersonalityFeedbackText = (personalityFeedbackResult as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text;
-                personalityFeedbackText = (rawPersonalityFeedbackText && rawPersonalityFeedbackText.trim()) ? rawPersonalityFeedbackText.trim() : `(${character.name} nods thoughtfully at your response.)`;
+                const feedbackResult = await callAIWithCharacter(
+                    personalityPromptForFeedback,
+                    input.judgingCharacterId
+                );
+                personalityFeedbackText = (feedbackResult && feedbackResult.trim()) ? feedbackResult.trim() : `(${character.name} nods thoughtfully at your response.)`;
             } catch (e) {
                 console.error(`Error generating personality feedback for ${character.name}:`, e);
                 personalityFeedbackText = `(${character.name} seems impressed with your effort.)`;
@@ -318,8 +317,6 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
         } else {
             personalityFeedbackText = "(Your response has been noted.)";
         }
-    } else {
-        personalityFeedbackText = "Your response has been recorded.";
     }
 
     // Initialize quality flags with definite boolean values for simplified path
@@ -403,14 +400,12 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       }
     }
     
-    const llmResponse = await generateWithCharacter({ 
-      prompt: processedPrompt,
-      characterId: input.judgingCharacterId || 'neuros',
-      config: { temperature: 0.4 }
-      // No output schema enforcement here for detailed path debugging
-    });
+    const llmResponse = await callAIWithCharacter(
+      processedPrompt,
+      input.judgingCharacterId || 'neuros'
+    );
 
-    rawAiOutputString = (llmResponse as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text || null;
+    rawAiOutputString = llmResponse;
     rawAiOutputStringForError = rawAiOutputString; // Capture for potential error return
     console.log('[AI RAW STRING OUTPUT - PRE-PARSE]:', rawAiOutputString);
     
@@ -442,7 +437,7 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       const aiDimData = llmRawOutput.rubricScores![dim]; 
       const score = (aiDimData && typeof aiDimData.score === 'number') ? Math.max(0, Math.min(1, aiDimData.score)) : 0.0;
       const label = (aiDimData && typeof aiDimData.label === 'string' && aiDimData.label.trim() !== "") ? aiDimData.label.trim() : `${dim.charAt(0).toUpperCase() + dim.slice(1).replace(/([A-Z])/g, ' $1')} N/A`;
-      ensuredRubricScores[dim] = { score, label, feedback: '' };
+      ensuredRubricScores[dim] = { score, label, feedback: aiDimData?.feedback || '' };
   }
   console.log('[DEFAULTED RUBRIC SCORES]:', JSON.stringify(ensuredRubricScores, null, 2));
 
@@ -478,7 +473,7 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
       const similarityScore = calculateSimilarity(input.userResponse, input.nodeContent);
       if (similarityScore > 0.80) { 
           finalQualityFlags.mimicry = true;
-          if(ensuredRubricScores.originality) ensuredRubricScores.originality = { score: Math.min(ensuredRubricScores.originality.score, 0.1), label: "High Similarity" };
+          if(ensuredRubricScores.originality) ensuredRubricScores.originality = { score: Math.min(ensuredRubricScores.originality.score, 0.1), label: "High Similarity", feedback: "Response appears to copy source material" };
       }
   }
   
@@ -522,13 +517,13 @@ export async function evaluateResponse(input: EvaluateResponseInput): Promise<Ev
               If they struggled (score < 60), offer a specific, constructive pointer related to a low-scoring rubric dimension.
            `;
           try {
-              const personalityFeedbackResult = await generateWithCharacter({
-                  prompt: personalityPromptForFeedback,
-                  characterId: input.judgingCharacterId, 
-                  config: { temperature: 0.6 }
-              });
-              const rawPersonalityFeedbackText = (personalityFeedbackResult as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text;
-              personalityFeedbackText = (rawPersonalityFeedbackText && rawPersonalityFeedbackText.trim()) ? rawPersonalityFeedbackText.trim() : `(${character.name} ponders your response...)`;
+              const personalityFeedbackResult = await callAIWithCharacter(
+                  personalityPromptForFeedback,
+                  input.judgingCharacterId, 
+                  undefined,
+                  undefined
+              );
+              personalityFeedbackText = (personalityFeedbackResult && personalityFeedbackResult.trim()) ? personalityFeedbackResult.trim() : `(${character.name} ponders your response...)`;
           } catch (e) {
                console.error(`Error generating personality feedback for ${character.name}:`, e);
                personalityFeedbackText = `(${character.name} seems to be having trouble forming a thought right now.)`;
@@ -667,4 +662,35 @@ function calculateSimilarity(text1: string, text2: string): number {
   const intersection = new Set([...set1].filter(x => set2.has(x)));
   const union = new Set([...set1, ...set2]);
   return union.size === 0 ? 0 : intersection.size / union.size;
+}
+
+// Helper function to call AI with provider selection and character personality
+async function callAIWithCharacter(prompt: string, characterId?: string, provider?: string, modelKey?: string): Promise<string | null> {
+  try {
+    // Get character personality if provided
+    let enhancedPrompt = prompt;
+    if (characterId) {
+      try {
+        const character = await fetchCharacterDetails(characterId);
+        if (character?.personalityProfile) {
+          enhancedPrompt = `${character.personalityProfile}\n\nUser Request: ${prompt}`;
+        }
+      } catch (characterError) {
+        console.warn(`Could not load character ${characterId}:`, characterError);
+      }
+    }
+
+    // Call the AI provider
+    const response = await callAIProvider(enhancedPrompt, provider, modelKey);
+    
+    if (response.error) {
+      console.error("AI provider error:", response.error);
+      return null;
+    }
+
+    return response.text;
+  } catch (error) {
+    console.error("Error in callAIWithCharacter:", error);
+    return null;
+  }
 }

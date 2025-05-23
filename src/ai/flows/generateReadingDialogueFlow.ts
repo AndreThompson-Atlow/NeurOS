@@ -10,7 +10,7 @@
  * - GenerateReadingDialogueOutput - The return type for the generateReadingDialogue function.
  */
 
-import { ai as baseAi, generateWithCharacter } from '../../../lib/server/genkit'; 
+import { callAIProvider } from '../../../src/utils/ai-providers';
 // Changed from '@/lib/server/ai/characters' to relative path
 import { getCharacterById } from '../../../lib/server/characters';  
 import type { Character } from '@/types/characterTypes'; 
@@ -22,6 +22,49 @@ import {
     DialogueTurnSchema
 } from './types/generateReadingDialogueTypes'; 
 
+// Function to get user's selected AI provider from localStorage on server-side
+// Note: This won't work server-side, so we'll pass it from client or use default
+function getUserAIProvider(): { provider?: string; modelKey?: string } {
+  // Since this is server-side, we'll return default and let the client-side API endpoints handle provider selection
+  return { provider: 'gemini', modelKey: 'gemini' };
+}
+
+// Helper function to call AI with provider selection and character personality
+async function callAIWithDialogueCharacter(prompt: string, characterId?: string, provider?: string, modelKey?: string): Promise<string | null> {
+  try {
+    console.log(`🤖 [DIALOGUE AI] Calling AI provider: ${provider || 'default'} with model: ${modelKey || 'default'} for character: ${characterId || 'none'}`);
+    
+    // Get character personality if provided
+    let enhancedPrompt = prompt;
+    if (characterId) {
+      try {
+        const character = await getCharacterById(characterId);
+        if (character?.personalityProfile) {
+          enhancedPrompt = `Character Personality: ${character.personalityProfile}\n\nTask: ${prompt}`;
+          console.log(`🎭 [DIALOGUE AI] Enhanced prompt with ${character.name} personality (${character.alignment} alignment)`);
+        }
+      } catch (characterError) {
+        console.warn(`⚠️ [DIALOGUE AI] Could not load character ${characterId}:`, characterError);
+      }
+    }
+
+    console.log(`📝 [DIALOGUE AI] Prompt length: ${enhancedPrompt.length} characters`);
+    
+    // Call the AI provider
+    const response = await callAIProvider(enhancedPrompt, provider, modelKey);
+    
+    if (response.error) {
+      console.error(`❌ [DIALOGUE AI] Provider error:`, response.error);
+      return null;
+    }
+
+    console.log(`✅ [DIALOGUE AI] Response received, length: ${response.text?.length || 0} characters`);
+    return response.text;
+  } catch (error) {
+    console.error(`💥 [DIALOGUE AI] Error in callAIWithDialogueCharacter:`, error);
+    return null;
+  }
+}
 
 export async function generateReadingDialogue(input: GenerateReadingDialogueInput): Promise<GenerateReadingDialogueOutput> {
   try {
@@ -102,19 +145,17 @@ Structure your response exactly like this example:
 Generate thoughtful, educational dialogue that helps the user understand the concept.
 `;
 
-const generateReadingDialogueFlow = baseAi.defineFlow(
-  {
-    name: 'generateReadingDialogueFlow',
-    inputSchema: GenerateReadingDialogueInputSchema,
-    outputSchema: GenerateReadingDialogueOutputSchema,
-  },
-  async (input) => {
+const generateReadingDialogueFlow = async (input: GenerateReadingDialogueInput): Promise<GenerateReadingDialogueOutput> => {
+    console.log(`🚀 [DIALOGUE FLOW] Starting dialogue generation for node: ${input.nodeTitle}`);
+    
     const personalitiesDetails: Character[] = [];
     for (const charId of input.personalities) {
       const char = await getCharacterById(charId); 
       if (char) {
         personalitiesDetails.push(char);
+        console.log(`👤 [DIALOGUE FLOW] Loaded character: ${char.name} (${char.alignment} alignment)`);
       } else {
+        console.warn(`⚠️ [DIALOGUE FLOW] Character not found: ${charId}, using fallback`);
         personalitiesDetails.push({ 
             id: charId, 
             name: charId, 
@@ -133,12 +174,12 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
     }
     
     if (personalitiesDetails.length === 0) {
-        console.error("No valid personalities provided for dialogue. Input personalities:", input.personalities);
+        console.error("❌ [DIALOGUE FLOW] No valid personalities provided for dialogue. Input personalities:", input.personalities);
         return { dialogue: [], error: "No valid personalities found to generate dialogue." };
     }
 
     const previousDialogueWithNames = await Promise.all(
-        (input.previousDialogue || []).map(async (turn) => {
+        (input.previousDialogue || []).map(async (turn: any) => {
             const char = await getCharacterById(turn.characterId);
             return { ...turn, characterName: char?.name || turn.characterId };
         })
@@ -152,33 +193,60 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
                            previousDialogueWithNames[previousDialogueWithNames.length - 1].message.toLowerCase().includes('how') ||
                            previousDialogueWithNames[previousDialogueWithNames.length - 1].message.toLowerCase().includes('why'));
 
-    const promptInput = {
-      ...input,
-      personalities_details: personalitiesDetails,
-      first_personality_id: personalitiesDetails[0].id,
-      second_personality_id: personalitiesDetails.length > 1 ? personalitiesDetails[1].id : personalitiesDetails[0].id,
-      previousDialogue: previousDialogueWithNames,
-      isUserQuestion: isUserQuestion // Add flag for user question
-    };
+    console.log(`🔍 [DIALOGUE FLOW] User question detected: ${isUserQuestion}`);
+
+    // Get user's AI provider preference (will default to gemini for server-side)
+    const userProvider = getUserAIProvider();
+    
+    // Build the dialogue prompt with all the context
+    let processedPrompt = generateReadingDialoguePromptString;
+    
+    // Replace variables manually since we're not using genkit flow
+    processedPrompt = processedPrompt.replace('{{{moduleTitle}}}', input.moduleTitle || 'Unknown Module');
+    processedPrompt = processedPrompt.replace('{{moduleAlignmentBias T="neutral"}}', input.moduleAlignmentBias || 'neutral');
+    processedPrompt = processedPrompt.replace('{{{domainTitle}}}', input.domainTitle || 'General Knowledge');
+    processedPrompt = processedPrompt.replace('{{{nodeTitle}}}', input.nodeTitle || 'Concept');
+    processedPrompt = processedPrompt.replace('{{{nodeShortDefinition}}}', input.nodeShortDefinition || 'No definition provided');
+    processedPrompt = processedPrompt.replace('{{{nodeClarification}}}', input.nodeClarification || 'No clarification provided');
+    
+    // Replace personalities details
+    const personalitiesList = personalitiesDetails.map(p => 
+      `- ${p.name} (ID: ${p.id}, Role: ${p.role}, Alignment: ${p.alignment}): ${p.personalityProfile || 'A helpful AI character'}`
+    ).join('\n');
+    processedPrompt = processedPrompt.replace(/\{\{#each personalities_details\}\}[\s\S]*?\{\{\/each\}\}/g, personalitiesList);
+    
+    // Replace previous dialogue if exists
+    if (previousDialogueWithNames.length > 0) {
+      const dialogueList = previousDialogueWithNames.map(turn => `- ${turn.characterName}: "${turn.message}"`).join('\n');
+      processedPrompt = processedPrompt.replace(/\{\{#if previousDialogue\}\}[\s\S]*?\{\{\/if\}\}/g, `## Recent Conversation Context\n${dialogueList}`);
+    } else {
+      processedPrompt = processedPrompt.replace(/\{\{#if previousDialogue\}\}[\s\S]*?\{\{\/if\}\}/g, '');
+    }
+    
+    // Add domain specters
+    if (input.domainSpecters && input.domainSpecters.length > 0) {
+      processedPrompt = processedPrompt.replace('{{#if domainSpecters}}{{join domainSpecters ", "}}{{else}}learning focus{{/if}}', input.domainSpecters.join(', '));
+    } else {
+      processedPrompt = processedPrompt.replace('{{#if domainSpecters}}{{join domainSpecters ", "}}{{else}}learning focus{{/if}}', 'learning focus');
+    }
 
     try {
-      // Use the simpler model calling approach
-      const response = await generateWithCharacter({
-        prompt: generateReadingDialoguePromptString,
-        characterId: promptInput.personalities_details[0].id,
-        config: {
-          temperature: isUserQuestion ? 0.4 : 0.7,
-          maxOutputTokens: 600
-        }
-      });
+      console.log(`📤 [DIALOGUE FLOW] Sending request to AI provider...`);
       
-      // Extract the output text
-      const outputText = (response as any)?.response?.candidates()?.[0]?.content?.parts?.[0]?.text;
+      // Use our new provider system with detailed logging
+      const outputText = await callAIWithDialogueCharacter(
+        processedPrompt,
+        personalitiesDetails[0].id,
+        userProvider.provider,
+        userProvider.modelKey
+      );
+      
       let output: GenerateReadingDialogueOutput = { dialogue: [] };
       
       try {
         if (outputText) {
-          console.log("Raw AI Response:", outputText); // Add logging to see the raw response
+          console.log(`📥 [DIALOGUE FLOW] Raw AI Response length: ${outputText.length}`);
+          console.log(`📋 [DIALOGUE FLOW] Raw AI Response preview: ${outputText.substring(0, 200)}...`);
           
           // First try to extract JSON from the response with regex - more reliable
           const jsonMatch = outputText.match(/\{[\s\S]*?\}/g);
@@ -187,9 +255,11 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
           if (jsonMatch && jsonMatch.length > 0) {
             // Take the largest JSON object which is likely to be the complete one
             jsonString = jsonMatch.reduce((a: string, b: string) => a.length > b.length ? a : b, '');
+            console.log(`🔍 [DIALOGUE FLOW] Found JSON object, length: ${jsonString.length}`);
           } else {
             // If no JSON object found, use the whole text
             jsonString = outputText;
+            console.log(`⚠️ [DIALOGUE FLOW] No JSON object found, using whole response`);
           }
           
           try {
@@ -198,10 +268,12 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
             const parsedOutput = JSON.parse(jsonString);
             
             if (parsedOutput.dialogue && Array.isArray(parsedOutput.dialogue)) {
+              console.log(`✅ [DIALOGUE FLOW] Successfully parsed ${parsedOutput.dialogue.length} dialogue turns`);
               output = { 
                 dialogue: parsedOutput.dialogue.map((entry: any) => {
                   // Ensure each entry has the required fields
                   if (typeof entry.characterId !== 'string' || typeof entry.message !== 'string') {
+                    console.warn(`⚠️ [DIALOGUE FLOW] Invalid dialogue entry, fixing:`, entry);
                     return {
                       characterId: personalitiesDetails[0].id,
                       message: typeof entry.message === 'string' ? entry.message : 
@@ -214,6 +286,7 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
               };
             } else if (parsedOutput.conversations || parsedOutput.messages || parsedOutput.response) {
               // Handle alternate output formats
+              console.log(`🔄 [DIALOGUE FLOW] Using alternate output format`);
               const possibleDialogue = parsedOutput.conversations || parsedOutput.messages || parsedOutput.response;
               if (Array.isArray(possibleDialogue)) {
                 output = {
@@ -226,7 +299,8 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
               }
             }
           } catch (jsonParseError) {
-            console.error("JSON parse error:", jsonParseError, "JSON string:", jsonString);
+            console.error("❌ [DIALOGUE FLOW] JSON parse error:", jsonParseError);
+            console.log("📄 [DIALOGUE FLOW] Failed JSON string:", jsonString.substring(0, 500));
             
             // Enhanced regex approach
             // First try to extract explicit dialogue turns
@@ -237,6 +311,7 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
             const matches = [...outputText.matchAll(dialoguePattern)];
             
             if (matches.length > 0) {
+              console.log(`🔧 [DIALOGUE FLOW] Using regex fallback, found ${matches.length} matches`);
               dialogueTurns = matches.map(match => ({
                 characterId: match[1],
                 message: match[2].replace(/\\"/g, '"')
@@ -254,12 +329,13 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
               if (quotedMatches.length > 0 && quotedMatches.length <= 6) { // Reasonable number of quotes
                 const longQuotes = quotedMatches
                   .map(m => m[1])
-                  .filter(text => text.length > 20) // Only reasonably long quotes
+                  .filter((text: string) => text.length > 20) // Only reasonably long quotes
                   .slice(0, 2); // Take at most 2 dialogue turns
                 
                 if (longQuotes.length > 0) {
+                  console.log(`🔧 [DIALOGUE FLOW] Using quoted text fallback, found ${longQuotes.length} quotes`);
                   output = {
-                    dialogue: longQuotes.map((quote, i) => ({
+                    dialogue: longQuotes.map((quote: string, i: number) => ({
                       characterId: i < personalitiesDetails.length ? 
                                    personalitiesDetails[i].id : personalitiesDetails[0].id,
                       message: quote
@@ -275,6 +351,7 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
                   .filter((p: string) => p.length > 30);
                 
                 if (paragraphs.length > 0) {
+                  console.log(`🔧 [DIALOGUE FLOW] Using paragraph fallback, found ${paragraphs.length} paragraphs`);
                   output = {
                     dialogue: paragraphs.slice(0, 2).map((para: string, i: number) => ({
                       characterId: i < personalitiesDetails.length ? 
@@ -288,10 +365,10 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
             }
           }
         } else {
-          console.error("Empty or undefined outputText from AI response", response);
+          console.error("❌ [DIALOGUE FLOW] Empty or undefined outputText from AI response");
         }
       } catch (parseError) {
-        console.error("Error parsing dialogue output:", parseError);
+        console.error("💥 [DIALOGUE FLOW] Error parsing dialogue output:", parseError);
         output = { 
           dialogue: [],
           error: "Failed to parse AI response"
@@ -300,7 +377,7 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
 
       // Improved fallback logic for empty output
       if (!output.dialogue || output.dialogue.length === 0) {
-        console.warn("Reading dialogue generation returned empty or invalid output");
+        console.warn("⚠️ [DIALOGUE FLOW] AI generation returned empty output, using fallback");
         
         // Try our robust test dialogue generator for guaranteed output
         const testDialogue = generateTestDialogue(input, personalitiesDetails);
@@ -317,7 +394,7 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
       const enhancedDialogue = output.dialogue.map((turn: {characterId: string, message: string}) => {
         // If the dialogue doesn't reference the concept specifically, add a reference
         if (!turn.message.includes(input.nodeTitle) && 
-            !input.nodeClarification.split(' ').some(word => word.length > 5 && turn.message.includes(word))) {
+            !input.nodeClarification.split(' ').some((word: string) => word.length > 5 && turn.message.includes(word))) {
           return {
             characterId: turn.characterId,
             message: `Regarding ${input.nodeTitle}, ${turn.message}`
@@ -326,13 +403,13 @@ const generateReadingDialogueFlow = baseAi.defineFlow(
         return turn;
       });
       
+      console.log(`🎉 [DIALOGUE FLOW] Successfully generated ${enhancedDialogue.length} dialogue turns`);
       return { dialogue: enhancedDialogue, error: output.error };
     } catch (error) {
-      console.error("Error in generateReadingDialogueFlow during AI generation:", error);
+      console.error("💥 [DIALOGUE FLOW] Error during AI generation:", error);
       return { dialogue: [], error: error instanceof Error ? error.message : "Unknown error during reading dialogue generation." };
     }
-  }
-);
+  };
 
 /**
  * Generate fallback/test dialogue for development and troubleshooting

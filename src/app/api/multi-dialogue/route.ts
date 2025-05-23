@@ -16,8 +16,14 @@ export async function POST(request: Request) {
       domainTitle,
       personalities,
       previousDialogue,
-      provider // Optional provider override
+      provider, // Optional provider override
+      modelKey  // Optional specific model (e.g., 'claudeSonnet4', 'claudeOpus4')
     } = requestData;
+    
+    console.log(`🔍 [MULTI-DIALOGUE API] Received request with:`);
+    console.log(`  - provider: ${provider || 'undefined'}`);
+    console.log(`  - modelKey: ${modelKey || 'undefined'}`);
+    console.log(`  - CONFIG.AI.provider (default): ${CONFIG.AI.provider}`);
     
     // Get character details
     const personalitiesDetails = [];
@@ -61,10 +67,10 @@ FORMAT YOUR RESPONSE AS VALID JSON with this structure:
 }
 `;
 
-    console.log("Making multi-dialogue API call with provider:", provider || CONFIG.AI.provider);
+    console.log("Making multi-dialogue API call with provider:", provider || CONFIG.AI.provider, "model:", modelKey || 'default');
     
-    // Call the selected AI provider
-    const aiResponse = await callAIProvider(prompt, provider);
+    // Call the selected AI provider with model support
+    const aiResponse = await callAIProvider(prompt, provider, modelKey);
     
     if (aiResponse.error) {
       console.error("AI provider error:", aiResponse.error);
@@ -81,6 +87,8 @@ FORMAT YOUR RESPONSE AS VALID JSON with this structure:
             message: `Yes, and in ${domainTitle}, it's particularly important because it relates to how we understand the fundamental principles.`
           }
         ],
+        provider: provider || CONFIG.AI.provider,
+        modelKey: modelKey || 'default',
         error: aiResponse.error
       });
     }
@@ -107,7 +115,11 @@ FORMAT YOUR RESPONSE AS VALID JSON with this structure:
         
         // Check if it has the expected structure
         if (parsedResponse.dialogue && Array.isArray(parsedResponse.dialogue)) {
-          return NextResponse.json(parsedResponse);
+          return NextResponse.json({
+            ...parsedResponse,
+            provider: provider || CONFIG.AI.provider,
+            modelKey: modelKey || 'default'
+          });
         }
       }
       
@@ -119,7 +131,8 @@ FORMAT YOUR RESPONSE AS VALID JSON with this structure:
             message: aiResponse.text.substring(0, 300)
           }
         ],
-        providerUsed: provider || CONFIG.AI.provider,
+        provider: provider || CONFIG.AI.provider,
+        modelKey: modelKey || 'default',
         error: "Could not parse structured dialogue format"
       });
       

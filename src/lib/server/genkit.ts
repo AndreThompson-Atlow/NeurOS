@@ -13,6 +13,8 @@ type GenerateOptions = {
   temperature?: number;
   maxTokens?: number;
   count?: number;
+  provider?: string; // AI provider (gemini, openai, claude, etc.)
+  modelKey?: string; // Specific model key for provider
   [key: string]: any;
 };
 
@@ -21,6 +23,42 @@ type KnowledgeCheckQuestion = {
   options: string[];
   correctOptionIndex: number;
   explanation: string;
+};
+
+// Function to get user's selected AI provider from localStorage
+const getUserAIProvider = (): { provider?: string; modelKey?: string } => {
+  if (typeof window === 'undefined') return {};
+  
+  try {
+    const learningStateJSON = localStorage.getItem('neuroosV2LearningState_v0_1_3');
+    if (learningStateJSON) {
+      const learningState = JSON.parse(learningStateJSON);
+      const selectedProvider = learningState?.aiProvider;
+      
+      if (selectedProvider) {
+        // Map provider keys to provider and model
+        switch (selectedProvider) {
+          case 'claude37':
+            return { provider: 'claude', modelKey: 'claude37' };
+          case 'claude4':
+            return { provider: 'claude', modelKey: 'claude4' };
+          case 'claudeOpus4':
+            return { provider: 'claude', modelKey: 'claudeOpus4' };
+          case 'claude':
+            return { provider: 'claude', modelKey: 'claude' };
+          case 'openai':
+            return { provider: 'openai', modelKey: 'openai' };
+          case 'gemini':
+          default:
+            return { provider: 'gemini', modelKey: 'gemini' };
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error accessing user AI provider preference:", error);
+  }
+  
+  return { provider: CONFIG.AI.provider, modelKey: CONFIG.AI.provider };
 };
 
 const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: number } = {}) => {
@@ -45,12 +83,20 @@ const fetchWithTimeout = async (url: string, options: RequestInit & { timeout?: 
 export const ai = {
   generate: async (options: GenerateOptions) => {
     try {
+      // Get user's AI provider preference and merge with explicit options
+      const userProvider = getUserAIProvider();
+      const optionsWithProvider = {
+        ...options,
+        provider: options.provider || userProvider.provider,
+        modelKey: options.modelKey || userProvider.modelKey
+      };
+      
       const response = await fetchWithTimeout('/api/ai/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(options),
+        body: JSON.stringify(optionsWithProvider),
         timeout: CONFIG.AI.timeout,
       });
       
@@ -72,12 +118,20 @@ export const ai = {
   
   run: async (options: GenerateOptions) => {
     try {
+      // Get user's AI provider preference and merge with explicit options
+      const userProvider = getUserAIProvider();
+      const optionsWithProvider = {
+        ...options,
+        provider: options.provider || userProvider.provider,
+        modelKey: options.modelKey || userProvider.modelKey
+      };
+      
       const response = await fetchWithTimeout('/api/ai/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(options),
+        body: JSON.stringify(optionsWithProvider),
         timeout: CONFIG.AI.timeout * 2, // Longer timeout for knowledge check generation
       });
       
@@ -114,12 +168,20 @@ export const ai = {
  */
 export const generateWithCharacter = async (options: GenerateOptions) => {
   try {
+    // Get user's AI provider preference and merge with explicit options
+    const userProvider = getUserAIProvider();
+    const optionsWithProvider = {
+      ...options,
+      provider: options.provider || userProvider.provider,
+      modelKey: options.modelKey || userProvider.modelKey
+    };
+    
     const response = await fetchWithTimeout('/api/ai/generateWithCharacter', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(options),
+      body: JSON.stringify(optionsWithProvider),
       timeout: CONFIG.AI.timeout,
     });
     
@@ -136,4 +198,7 @@ export const generateWithCharacter = async (options: GenerateOptions) => {
       error: error instanceof Error ? error.message : String(error)
     };
   }
-}; 
+};
+
+// Compatibility exports
+export { generateWithCharacter as generate }; 

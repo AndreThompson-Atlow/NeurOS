@@ -85,24 +85,33 @@ export function AdminPanel({ modules, onSetModuleStatus, onRemoveModule, onExit 
                   <div className="flex items-center justify-between space-x-2 p-3 bg-muted/20 rounded-md border border-border/20">
                     <Label htmlFor="ai-provider-select" className="text-sm font-medium text-foreground/90 flex items-center gap-2">
                       <Bot size={16} className="text-primary"/>
-                      AI Provider
+                      AI Provider & Model
                     </Label>
                     <Select
                       value={aiProvider || 'gemini'}
                       onValueChange={(value) => setAIProvider(value)}
                     >
-                      <SelectTrigger id="ai-provider-select" className="w-[180px] h-9 text-xs ui-select-trigger">
+                      <SelectTrigger id="ai-provider-select" className="w-[200px] h-9 text-xs ui-select-trigger">
                         <SelectValue placeholder="Select AI provider" />
                       </SelectTrigger>
                       <SelectContent className="ui-select-content">
                         <SelectItem value="gemini" className="text-xs ui-select-item">
-                          Gemini
+                          🟢 Gemini 1.5 Pro
                         </SelectItem>
                         <SelectItem value="openai" className="text-xs ui-select-item">
-                          OpenAI
+                          🔵 GPT-4 Turbo
                         </SelectItem>
                         <SelectItem value="claude" className="text-xs ui-select-item">
-                          Claude
+                          🟣 Claude 3.5 Sonnet v2
+                        </SelectItem>
+                        <SelectItem value="claude37" className="text-xs ui-select-item">
+                          🟣 Claude 3.7 Sonnet
+                        </SelectItem>
+                        <SelectItem value="claude4" className="text-xs ui-select-item">
+                          🟣 Claude 4 Sonnet
+                        </SelectItem>
+                        <SelectItem value="claudeOpus4" className="text-xs ui-select-item">
+                          🟣 Claude 4 Opus (Premium)
                         </SelectItem>
                       </SelectContent>
                     </Select>

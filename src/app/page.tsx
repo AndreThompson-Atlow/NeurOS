@@ -86,8 +86,20 @@ export default function Home() {
     startReviewSession,
     startManualReviewSession,
     hasStandardReviewNodes,
-    hasManualReviewNodes
+    hasManualReviewNodes,
+    aiProvider,
+    setAIProvider
   } = useLearningSession();
+
+  // Add immediate debugging for aiProvider
+  console.log(`🔍 [COMPONENT DEBUG] useLearningSession() returned:`);
+  console.log(`  - aiProvider: "${aiProvider}"`);
+  console.log(`  - typeof aiProvider: ${typeof aiProvider}`);
+  
+  // Check if the hook is working at all
+  React.useEffect(() => {
+    console.log(`🔍 [COMPONENT EFFECT] aiProvider changed to: "${aiProvider}"`);
+  }, [aiProvider]);
 
   const [allAiCharacters, setAllAiCharacters] = useState<Character[]>([]);
   const [selectedGuideId] = useState<string>('neuros');
@@ -185,22 +197,63 @@ export default function Home() {
     }
     setIsLoadingDialogue(true);
     try {
-      const dialogueInput: GenerateReadingDialogueInput = {
-        nodeTitle: targetNode.title,
-        nodeShortDefinition: targetNode.shortDefinition,
-        nodeClarification: targetNode.download.clarification,
-        moduleTitle: targetModule.title,
-        moduleAlignmentBias: targetModule.alignmentBias,
-        domainTitle: targetDomain.title,
-        domainSpecters: targetDomain.specterAffinities || [],
-        domainCharacterAffinities: targetDomain.characterAffinities || [],
-        personalities: personalitiesForDialogue,
-        previousDialogue: previousDialogueTurns, 
-      };
-      const result = await generateReadingDialogueFlow(dialogueInput);
+      // Get the user's selected AI provider from the hook
+      const userProvider = aiProvider;
+      const userModelKey = aiProvider; // Use the same value for modelKey for now
+      
+      console.log(`🔍 [CLIENT DEBUG] Hook values:`);
+      console.log(`  - aiProvider from hook: "${aiProvider}"`);
+      console.log(`  - userProvider: "${userProvider}"`);
+      console.log(`  - userModelKey: "${userModelKey}"`);
+      
+      // Also check localStorage directly
+      if (typeof window !== 'undefined') {
+        try {
+          const learningStateJSON = localStorage.getItem('neuroosV2LearningState_v0_1_3');
+          if (learningStateJSON) {
+            const learningState = JSON.parse(learningStateJSON);
+            console.log(`  - aiProvider from localStorage: "${learningState?.aiProvider || 'undefined'}"`);
+          } else {
+            console.log(`  - No learning state found in localStorage`);
+          }
+        } catch (e) {
+          console.log(`  - Error reading localStorage: ${e}`);
+        }
+      }
+      
+      console.log(`🎯 [CLIENT] Sending dialogue request with provider: ${userProvider}, modelKey: ${userModelKey}`);
+      
+      // Use the multi-dialogue API endpoint with explicit provider selection
+      const response = await fetch('/api/multi-dialogue', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          nodeTitle: targetNode.title,
+          nodeShortDefinition: targetNode.shortDefinition,
+          nodeClarification: targetNode.download.clarification,
+          moduleTitle: targetModule.title,
+          moduleAlignmentBias: targetModule.alignmentBias,
+          domainTitle: targetDomain.title,
+          domainSpecters: targetDomain.specterAffinities || [],
+          domainCharacterAffinities: targetDomain.characterAffinities || [],
+          personalities: personalitiesForDialogue,
+          previousDialogue: previousDialogueTurns,
+          // Explicitly pass the user's provider selection
+          provider: userProvider,
+          modelKey: userModelKey,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Multi-dialogue API returned status ${response.status}`);
+      }
+
+      const result = await response.json();
+      
       if (result.dialogue && result.dialogue.length > 0) {
-        // Toasting dialogue here might be too much for the UI.
-        // The component using this function should handle displaying the dialogue.
+        console.log(`✅ [CLIENT] Dialogue generated successfully using provider: ${result.provider || 'unknown'}`);
       } else if (result.error) {
         toast({ title: "Dialogue Error", description: result.error, variant: "destructive" });
       } else {

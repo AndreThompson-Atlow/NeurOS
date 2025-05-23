@@ -77,24 +77,29 @@ export async function callGeminiAPI(prompt: string): Promise<AIProviderResponse>
 /**
  * Call the OpenAI API directly
  */
-export async function callOpenAIAPI(prompt: string): Promise<AIProviderResponse> {
+export async function callOpenAIAPI(prompt: string, modelKey?: string): Promise<AIProviderResponse> {
   try {
     // Use the API key directly
     const apiKey = CONFIG.AI.openaiApiKey;
     
-    console.log("Using OpenAI API with prompt length:", prompt.length);
+    // Get model config based on modelKey or use default
+    const modelConfig = modelKey && CONFIG.models[modelKey as keyof typeof CONFIG.models] 
+      ? CONFIG.models[modelKey as keyof typeof CONFIG.models] 
+      : CONFIG.models.openai;
+    
+    console.log("Using OpenAI API with model:", modelConfig.displayName, "prompt length:", prompt.length);
     
     // Prepare the request payload according to OpenAI's API docs
     const payload = {
-      model: CONFIG.models.openai.apiName,
+      model: modelConfig.apiName,
       messages: [
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: CONFIG.models.openai.temperature,
-      max_tokens: CONFIG.models.openai.maxTokens,
+      temperature: modelConfig.temperature,
+      max_tokens: modelConfig.maxTokens,
       top_p: 0.8
     };
     
@@ -141,24 +146,47 @@ export async function callOpenAIAPI(prompt: string): Promise<AIProviderResponse>
 /**
  * Call the Claude API directly
  */
-export async function callClaudeAPI(prompt: string): Promise<AIProviderResponse> {
+export async function callClaudeAPI(prompt: string, modelKey?: string): Promise<AIProviderResponse> {
   try {
     // Use the API key directly
     const apiKey = CONFIG.AI.claudeApiKey;
     
-    console.log("Using Claude API with prompt length:", prompt.length);
+    // Get model config based on modelKey or use default
+    let modelConfig = CONFIG.models.claude; // Default
+    
+    if (modelKey) {
+      switch (modelKey) {
+        case 'claudeOpus4':
+          modelConfig = CONFIG.models.claudeOpus4;
+          break;
+        case 'claudeSonnet4':
+        case 'claude4':
+          modelConfig = CONFIG.models.claudeSonnet4;
+          break;
+        case 'claudeSonnet37':
+        case 'claude37':
+          modelConfig = CONFIG.models.claudeSonnet37;
+          break;
+        case 'claude':
+        default:
+          modelConfig = CONFIG.models.claude;
+          break;
+      }
+    }
+    
+    console.log("Using Claude API with model:", modelConfig.displayName, "prompt length:", prompt.length);
     
     // Prepare the request payload according to Anthropic's API docs
     const payload = {
-      model: CONFIG.models.claude.apiName,
+      model: modelConfig.apiName,
       messages: [
         {
           role: "user",
           content: prompt
         }
       ],
-      temperature: CONFIG.models.claude.temperature,
-      max_tokens: CONFIG.models.claude.maxTokens,
+      temperature: modelConfig.temperature,
+      max_tokens: modelConfig.maxTokens,
       top_p: 0.8
     };
     
@@ -206,7 +234,7 @@ export async function callClaudeAPI(prompt: string): Promise<AIProviderResponse>
 /**
  * Call any configured AI provider 
  */
-export async function callAIProvider(prompt: string, provider?: string): Promise<AIProviderResponse> {
+export async function callAIProvider(prompt: string, provider?: string, modelKey?: string): Promise<AIProviderResponse> {
   // Use specified provider, or try to get from learning state (if available in browser), or default from config
   let selectedProvider = provider || CONFIG.AI.provider;
   
@@ -225,16 +253,38 @@ export async function callAIProvider(prompt: string, provider?: string): Promise
     }
   }
   
-  console.log(`Using AI provider: ${selectedProvider}`);
+  console.log(`Using AI provider: ${selectedProvider}${modelKey ? ` with model: ${modelKey}` : ''}`);
   
   // Call the appropriate provider
   switch (selectedProvider) {
     case 'openai':
-      return callOpenAIAPI(prompt);
+      return callOpenAIAPI(prompt, modelKey);
     case 'claude':
-      return callClaudeAPI(prompt);
+    case 'claude4':
+    case 'claude37':
+      return callClaudeAPI(prompt, modelKey || selectedProvider);
     case 'gemini':
     default:
       return callGeminiAPI(prompt);
   }
+}
+
+/**
+ * Get available models for each provider
+ */
+export function getAvailableModels(): { [provider: string]: { key: string, name: string, model: string }[] } {
+  return {
+    gemini: [
+      { key: 'gemini', name: CONFIG.models.gemini.displayName, model: CONFIG.models.gemini.apiName }
+    ],
+    openai: [
+      { key: 'openai', name: CONFIG.models.openai.displayName, model: CONFIG.models.openai.apiName }
+    ],
+    claude: [
+      { key: 'claude', name: CONFIG.models.claude.displayName, model: CONFIG.models.claude.apiName },
+      { key: 'claudeSonnet37', name: CONFIG.models.claudeSonnet37.displayName, model: CONFIG.models.claudeSonnet37.apiName },
+      { key: 'claudeSonnet4', name: CONFIG.models.claudeSonnet4.displayName, model: CONFIG.models.claudeSonnet4.apiName },
+      { key: 'claudeOpus4', name: CONFIG.models.claudeOpus4.displayName, model: CONFIG.models.claudeOpus4.apiName }
+    ]
+  };
 } 

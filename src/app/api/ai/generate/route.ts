@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ai } from '../../../../../lib/server/genkit';
+import { callAIProvider } from '@/utils/ai-providers';
 
 export const maxDuration = 60; // Set timeout to 60 seconds
 
@@ -14,9 +14,54 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const {
+      prompt,
+      system,
+      provider,
+      modelKey,
+      config = {},
+      ...otherOptions
+    } = options;
+
+    // Prepare the final prompt for the AI provider
+    let finalPrompt = prompt || '';
+    if (system) {
+      finalPrompt = `System: ${system}\n\nUser: ${finalPrompt}`;
+    }
+
+    console.log(`Calling AI provider: ${provider || 'default'} with model: ${modelKey || 'default'}`);
+
+    // Call the selected AI provider
+    const aiResponse = await callAIProvider(finalPrompt, provider, modelKey);
     
-    // Call the server-side AI generation function
-    const result = await ai.generate(options);
+    if (aiResponse.error) {
+      console.error("AI provider error:", aiResponse.error);
+      return NextResponse.json(
+        { 
+          error: 'AI provider failed',
+          details: aiResponse.error,
+          fallback: true
+        },
+        { status: 500 }
+      );
+    }
+
+    // Format response to match the expected structure
+    const result = {
+      response: {
+        candidates: () => [{
+          content: {
+            parts: [{
+              text: aiResponse.text
+            }]
+          }
+        }]
+      },
+      text: aiResponse.text,
+      provider: provider,
+      modelKey: modelKey
+    };
     
     return NextResponse.json(result);
   } catch (error) {

@@ -8,8 +8,8 @@
 // Try to use environment variables first, then fall back to hardcoded defaults
 // Using a backup key that should work with basic Gemini models
 export const GOOGLE_AI_API_KEY = process.env.GOOGLE_AI_API_KEY || 'AIzaSyAHfuVIAmPz1qbyam2P71STgAqVmzGUSzA';
-export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
-export const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || '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';
+export const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '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';
+export const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || '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';
 
 // You can add other API keys or configuration values here
 export const CONFIG = {
@@ -34,14 +34,33 @@ export const CONFIG = {
       maxTokens: 800
     },
     openai: {
-      displayName: 'GPT-4',
-      apiName: 'gpt-4-turbo-preview',
+      displayName: 'GPT-4o',
+      apiName: 'gpt-4o', // Latest GPT-4 Omni model
       temperature: 0.7,
       maxTokens: 800
     },
     claude: {
-      displayName: 'Claude 3 Opus',
-      apiName: 'claude-3-opus-20240229',
+      displayName: 'Claude 3.5 Sonnet v2',
+      apiName: 'claude-3-5-sonnet-20241022',
+      temperature: 0.7,
+      maxTokens: 800
+    },
+    // Claude 4 models (using correct model names)
+    claudeOpus4: {
+      displayName: 'Claude 4 Opus',
+      apiName: 'claude-opus-4-20250514', // Real Claude 4 Opus
+      temperature: 0.7,
+      maxTokens: 800
+    },
+    claudeSonnet4: {
+      displayName: 'Claude 4 Sonnet',
+      apiName: 'claude-sonnet-4-20250514', // Real Claude 4 Sonnet
+      temperature: 0.7,
+      maxTokens: 800
+    },
+    claudeSonnet37: {
+      displayName: 'Claude 3.7 Sonnet',
+      apiName: 'claude-3-7-sonnet-20250219', // Real Claude 3.7 Sonnet
       temperature: 0.7,
       maxTokens: 800
     }
