@@ -98,6 +98,9 @@ export function AdminPanel({ modules, onSetModuleStatus, onRemoveModule, onExit 
                         <SelectItem value="gemini" className="text-xs ui-select-item">
                           🟢 Gemini 1.5 Pro
                         </SelectItem>
+                        <SelectItem value="gemini25" className="text-xs ui-select-item">
+                          🟢 Gemini 2.5 Pro (Preview)
+                        </SelectItem>
                         <SelectItem value="openai" className="text-xs ui-select-item">
                           🔵 GPT-4 Turbo
                         </SelectItem>

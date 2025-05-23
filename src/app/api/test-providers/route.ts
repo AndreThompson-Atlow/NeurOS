@@ -8,6 +8,7 @@ export async function GET() {
     // Test each provider
     const results = {
       gemini: null as any,
+      gemini25: null as any,
       openai: null as any,
       claude: null as any,
       claudeSonnet4: null as any,
@@ -27,6 +28,21 @@ export async function GET() {
       };
     } catch (error) {
       results.gemini = {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+    
+    // Test Gemini 2.5 Pro
+    try {
+      const gemini25Result = await callAIProvider(testPrompt, 'gemini25');
+      results.gemini25 = {
+        success: !gemini25Result.error,
+        response: gemini25Result.text?.substring(0, 100),
+        error: gemini25Result.error
+      };
+    } catch (error) {
+      results.gemini25 = {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };

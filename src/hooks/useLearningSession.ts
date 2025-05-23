@@ -2562,7 +2562,7 @@ export function useLearningSession() {
   // Set AI provider function
   const setAIProviderCallback = useCallback((provider: string) => {
     // Only accept valid providers (including specific Claude models)
-    const validProviders = ['gemini', 'openai', 'claude', 'claude37', 'claude4', 'claudeOpus4'];
+    const validProviders = ['gemini', 'gemini25', 'openai', 'claude', 'claude37', 'claude4', 'claudeOpus4'];
     if (validProviders.includes(provider)) {
       setLearningState(prev => {
         const newState = { ...prev, aiProvider: provider };
@@ -2584,6 +2584,9 @@ export function useLearningSession() {
             break;
           case 'gemini':
             displayName = 'Gemini 1.5 Pro';
+            break;
+          case 'gemini25':
+            displayName = 'Gemini 2.5 Pro (Preview)';
             break;
           case 'openai':
             displayName = 'GPT-4 Turbo';

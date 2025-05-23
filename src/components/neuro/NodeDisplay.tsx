@@ -425,6 +425,7 @@ export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  
                     evaluationResult={evaluationResult}
                     judgingCharacterId={activeModule?.defaultCompanion || 'neuros'}
                     onResubmit={handleReviseAnswer}
+                    onProceed={onProceedAfterSuccess}
                   />
                 )}
               </CardContent>
@@ -580,6 +581,7 @@ export function NodeDisplay({  node,  phase,  probeQuestions,  isLoadingProbe,  
                     evaluationResult={evaluationResult}
                     judgingCharacterId={activeModule?.defaultCompanion || 'neuros'}
                     onResubmit={handleReviseAnswer}
+                    onProceed={onProceedAfterSuccess}
                   />
                 )}
               </CardContent>

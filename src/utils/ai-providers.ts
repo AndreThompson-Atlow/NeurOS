@@ -7,6 +7,49 @@ export interface AIProviderResponse {
 }
 
 /**
+ * Call the new Gemini 2.5 Pro API using the Google GenAI SDK
+ */
+export async function callGemini25API(prompt: string): Promise<AIProviderResponse> {
+  try {
+    // Dynamic import to avoid bundling issues
+    const { GoogleGenAI } = await import('@google/genai');
+    
+    const apiKey = CONFIG.AI.googleApiKey;
+    console.log("Using Gemini 2.5 Pro API with prompt length:", prompt.length);
+    
+    // Initialize the new Google GenAI client
+    const ai = new GoogleGenAI({ apiKey });
+    
+    // Generate content using the new SDK
+    const response = await ai.models.generateContent({
+      model: CONFIG.models.gemini25.apiName,
+      contents: prompt,
+      config: {
+        temperature: CONFIG.models.gemini25.temperature,
+        maxOutputTokens: CONFIG.models.gemini25.maxTokens,
+        topP: 0.8,
+        topK: 40
+      }
+    });
+    
+    console.log("Gemini 2.5 Pro API response received");
+    
+    // Extract the response text
+    const textResponse = response.text || "";
+    
+    return {
+      text: textResponse
+    };
+  } catch (error) {
+    console.error("Gemini 2.5 Pro API call failed:", error);
+    return {
+      text: "",
+      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+}
+
+/**
  * Call the Gemini API directly
  */
 export async function callGeminiAPI(prompt: string): Promise<AIProviderResponse> {
@@ -257,6 +300,8 @@ export async function callAIProvider(prompt: string, provider?: string, modelKey
   
   // Call the appropriate provider
   switch (selectedProvider) {
+    case 'gemini25':
+      return callGemini25API(prompt);
     case 'openai':
       return callOpenAIAPI(prompt, modelKey);
     case 'claude':
@@ -275,7 +320,8 @@ export async function callAIProvider(prompt: string, provider?: string, modelKey
 export function getAvailableModels(): { [provider: string]: { key: string, name: string, model: string }[] } {
   return {
     gemini: [
-      { key: 'gemini', name: CONFIG.models.gemini.displayName, model: CONFIG.models.gemini.apiName }
+      { key: 'gemini', name: CONFIG.models.gemini.displayName, model: CONFIG.models.gemini.apiName },
+      { key: 'gemini25', name: CONFIG.models.gemini25.displayName, model: CONFIG.models.gemini25.apiName }
     ],
     openai: [
       { key: 'openai', name: CONFIG.models.openai.displayName, model: CONFIG.models.openai.apiName }

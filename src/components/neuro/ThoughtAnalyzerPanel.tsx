@@ -18,6 +18,7 @@ interface ThoughtAnalyzerPanelProps {
   onResubmit?: () => void;
   onRequestHint?: () => void;
   onViewPast?: () => void;
+  onProceed?: () => void;
 }
 
 const RubricDimensionDisplay: React.FC<{ label: string; scoreData: RubricDimensionScoreType | undefined }> = ({ label, scoreData }) => {
@@ -52,6 +53,7 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
   onResubmit,
   onRequestHint,
   onViewPast,
+  onProceed,
 }) => {
   const {
     score: overallScore, // Renamed for clarity within this component
@@ -208,6 +210,14 @@ export const ThoughtAnalyzerPanel: React.FC<ThoughtAnalyzerPanelProps> = ({
         )}
 
       </CardContent>
+      {/* Show continue button if evaluation passed and onProceed is provided */}
+      {onProceed && isPass && (
+        <CardFooter className="p-0 mt-spacing-lg pt-spacing-lg border-t border-border/30 flex justify-end gap-spacing-sm">
+          <Button onClick={onProceed} variant="default" size="sm" className="text-xs bg-primary hover:bg-primary/90">
+            <CheckCircle size={16} className="mr-spacing-xs"/> Continue to Next Node
+          </Button>
+        </CardFooter>
+      )}
       {/* Only show "Revise Answer" if detailed analysis was NOT displayed (meaning analyzer was off) AND it's not a pass */}
       {/* OR if it's not a pass and it's NOT a shame engine warning case (which has its own retry) */}
       {onResubmit && !isPass && (!detailedAnalysisPerformed || !displayShameEngineWarning) && (
